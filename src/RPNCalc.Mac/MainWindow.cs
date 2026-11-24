@@ -12,6 +12,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform;
 using RPNCalc.Engine;
+using RPNCalc.Shared;
 
 namespace RPNCalc.Mac;
 
@@ -203,8 +204,8 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>Bold arrow outline in a 10 x 12 unit box: wide head, thick shaft (same shape as on Windows).</summary>
-    internal const string ArrowUpData = "M5,0 L10,5.5 L6.9,5.5 L6.9,12 L3.1,12 L3.1,5.5 L0,5.5 Z";
-    internal const string ArrowDownData = "M5,12 L10,6.5 L6.9,6.5 L6.9,0 L3.1,0 L3.1,6.5 L0,6.5 Z";
+    internal const string ArrowUpData = KeyMapper.ArrowUpData;
+    internal const string ArrowDownData = KeyMapper.ArrowDownData;
 
     /// <summary>
     /// Replaces the button text with a vector arrow (crisp at any Retina scale). The accessible name keeps
@@ -494,32 +495,9 @@ public sealed class MainWindow : Window
         if (key == Key.Insert && mods == KeyModifiers.Shift) { _ = PasteX(); return true; }
         if ((mods & KeyModifiers.Alt) != 0) return false;
 
-        CalcCommand cmd = key switch
-        {
-            Key.Enter => CalcCommand.Enter,                  // Return and keypad Enter
-            Key.Up => CalcCommand.RollUp,
-            Key.Down => CalcCommand.RollDown,
-            Key.Back => CalcCommand.Backspace,               // Mac "delete" key
-            Key.Escape or Key.Delete or Key.Clear or Key.OemClear => CalcCommand.ClearX, // Esc, forward-delete, keypad Clear
-            >= Key.NumPad0 and <= Key.NumPad9 => CalcCommand.D0 + (key - Key.NumPad0),
-            Key.Add => CalcCommand.Add,
-            Key.Subtract => CalcCommand.Subtract,
-            Key.Multiply => CalcCommand.Multiply,
-            Key.Divide => CalcCommand.Divide,
-            Key.Decimal or Key.Separator => CalcCommand.Decimal,
-            _ => CalcCommand.None,
-        };
         if (key == Key.F1) { ShowHelp(); return true; }
-        if (key is Key.Space or Key.Left or Key.Right or Key.Tab) return true;   // swallow: never move focus / press buttons
-
-        if (cmd == CalcCommand.None && !string.IsNullOrEmpty(symbol) && symbol.Length == 1)
-            cmd = CommandMap.FromChar(symbol[0]);
-        if (cmd == CalcCommand.None && string.IsNullOrEmpty(symbol))
-        {
-            // Fallback when the platform supplies no symbol.
-            if (key is >= Key.D0 and <= Key.D9 && mods == KeyModifiers.None) cmd = CalcCommand.D0 + (key - Key.D0);
-            else if (key == Key.OemPeriod && mods == KeyModifiers.None) cmd = CalcCommand.Decimal;
-        }
+        if (KeyMapper.IsSwallowed(key)) return true;   // never move focus / press buttons
+        CalcCommand cmd = KeyMapper.Map(key, mods, symbol);
         if (cmd == CalcCommand.None) return false;
         Run(cmd);
         return true;

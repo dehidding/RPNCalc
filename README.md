@@ -4,6 +4,7 @@ This is a modern re-implementation of my 1997 Delphi **RPNCalc**.
 
 - **Windows 10/11:** a single portable `RPNCalc.exe` with no installer, no .NET install and no registry use. It is written in C# with WinForms on .NET 8, self-contained for win-x64, and is per-monitor DPI aware (PerMonitorV2).
 - **macOS 11+ (Apple Silicon) / 10.15+ (Intel):** a self-contained `RPNCalc.app` built with [Avalonia UI](https://avaloniaui.net/) on .NET 8. It uses the same calculator engine, layout, menus and keys as the Windows version. See [macOS](#macos).
+- **Android 7.0+ (test build):** a sideloadable `RPNCalc-android.apk` built with Avalonia UI on .NET 10. It is the same engine and menu in a full-screen touch layout. See [Android](#android).
 
 ## Download (Windows)
 Download the latest `RPNCalc.exe` from the [Releases page](https://github.com/dehidding/RPNCalc/releases/latest). It is a single self-contained Windows x64 file: no installer and no .NET install needed. The exe is unsigned, so Windows SmartScreen may show a warning the first time you run it (click **More info → Run anyway**).
@@ -62,6 +63,37 @@ The letter keys S, L, X and P and the ↑/↓ arrows work exactly as on Windows 
 ~/Library/Application Support/RPNCalc/settings.json
 ```
 It works the same way as on Windows (see [Settings file](#settings-file)). To reset everything, quit RPNCalc and delete this file. In Finder, press Shift+Cmd+G and paste the folder path to find it.
+
+## Android
+![Android preview (portrait and landscape)](dist/android-preview.png)
+
+### Install (sideload the test APK)
+`dist/RPNCalc-android.apk` is a signed **test** build (self-signed test key, not from Google Play) for 64-bit ARM phones and tablets plus x86-64 emulators and Chromebooks. It needs Android 7.0 (API 24) or newer.
+
+1. Copy the APK to the phone and open it in **Files**, or download it on the phone.
+2. Android asks you to allow installs from that app (Files, Chrome…). Tap **Settings → Allow from this source**, go back and tap **Install**. Google Play Protect may warn about an unknown developer; tap **More details → Install anyway**.
+3. Alternatively, with USB debugging enabled: `adb install -r dist/RPNCalc-android.apk`.
+
+Later test builds signed with the same key install over this one and keep your settings. A build signed with a different key must be uninstalled first, which deletes the settings.
+
+### Differences from the desktop versions
+- **The menu** opens from the **⋮** button in the top bar, or by **long-pressing the display**. It has the same items as on the desktop, plus **Copy X** and **Paste X**. **Stay on Top** is left out because Android apps run full screen and have no overlapping windows.
+- **Full-screen layout:** the keys stretch to fill the screen. In landscape the registers move to the left and the keys to the right. **Font Size** changes the register digits as on the desktop.
+- **Help and About** open as full-screen pages. The **←** button, the Android **Back** button/gesture or Esc closes them.
+- **Conversions → Edit Conversions...** opens an in-app CSV editor. Each skipped line is listed with its reason while you type. The editor has **Reset to defaults**, plus **Import...** and **Export...** buttons that use the system file picker (Downloads, Drive, etc.).
+- **Storage:** `settings.json` and `conversions.csv` are kept in the app's private storage. They are saved shortly after every change and whenever the app goes to the background. Clearing the app's storage in Android Settings restores the defaults.
+- **Hardware keyboard:** a USB or Bluetooth keyboard uses the same keys as the desktop (digits, operators, Enter, Backspace, Esc, S/L/X/P, ↑/↓, Ctrl+C/V, F1). The mapping is shared with the macOS version (`src/Shared/KeyMapper.cs`).
+
+### Building the APK
+You need the .NET 10 SDK with the Android workload (`dotnet workload install android`), the Android SDK (platform 36, build-tools 36) and JDK 17 or 21. Signing passwords are read from environment variables and are never stored in the repository:
+
+```bash
+export ANDROID_HOME=~/Android/sdk JAVA_HOME=/path/to/jdk-21
+export RPNCALC_KEYSTORE_PASS='choose-a-password'   # a test keystore is created on first use
+./build/android/build-android.sh                   # -> dist/RPNCalc-android.apk (signed, arm64 + x64)
+```
+
+The script runs `dotnet publish src/RPNCalc.Android -c Release` with the signing properties, then verifies the result with `apksigner` and `aapt`. `src/RPNCalc.Android` is deliberately **not** in `RPNCalc.sln`, so `dotnet build` / `dotnet test` on the solution keep working on machines without the Android workload.
 
 ## Features
 - HP-style four-level stack (X, Y, Z, T) with **Last X**:
@@ -162,9 +194,12 @@ RPNCalc.sln
 src/RPNCalc.Engine/        Platform-independent engine: stack, operations, conversions, formatting, JSON settings
 src/RPNCalc/               WinForms GUI (MainForm, HelpForm, AboutForm), icon from the original exe
 src/RPNCalc.Mac/           macOS GUI (Avalonia UI): MainWindow, Help/About dialogs, app menu
+src/RPNCalc.Android/       Android GUI (Avalonia UI, net10.0-android; not in the .sln): CalculatorView, overlays, MainActivity
+src/Shared/                Source linked into the macOS and Android GUIs (keyboard mapping, arrow shapes)
 tests/RPNCalc.Engine.Tests xUnit tests for the engine (run on Linux or Windows)
 tests/RPNCalc.Mac.Tests    Headless Avalonia UI tests for the macOS GUI (keys, menu, layout, save/restore)
 build/mac/                 rpncalc.icns and package-mac.sh (builds and zips RPNCalc.app)
+build/android/             build-android.sh (builds, signs and verifies dist/RPNCalc-android.apk)
 docs/                      Reconstruction spec recovered from the original 1997 Rpncalc.exe
 ```
 
