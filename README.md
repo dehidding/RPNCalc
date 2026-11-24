@@ -96,7 +96,8 @@ The Conversions menu is built from a 3-column CSV file stored next to `settings.
 - Use `.` as the decimal point. Put a name that contains a comma in double quotes. Blank lines, lines starting with `#`, and a header line on the first row are ignored.
 - The file is re-read every time the menu opens, so edits take effect without a restart. **Conversions → Edit Conversions...** opens the file: on Windows in the app associated with `.csv` files, on macOS in the default text editor.
 - If a line is invalid it is skipped, and the menu shows "⚠ N line(s) skipped". Help lists each skipped line and the reason.
-- If the file doesn't exist, it is created with the original 7 conversions. Delete it to get them back.
+- If the file doesn't exist, it is created from the built-in list (26 conversions: volume units, Grams → lbs./M and lbs, and Cubic Inches → weight for common plastics and metals). Delete it to get the built-in list back. The built-in list is `src/RPNCalc.Engine/conversions.csv`.
+- An existing conversions.csv is never overwritten, so after upgrading you keep your own list. Delete it (or copy the new one in) to get the new built-in list.
 
 ```csv
 From,To,Factor

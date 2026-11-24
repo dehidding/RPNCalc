@@ -17,7 +17,7 @@ public sealed record ConversionTable(IReadOnlyList<Conversion> Items, IReadOnlyL
 /// Conversions are read from a 3-column CSV file (From, To, Factor) next to settings.json:
 ///   Windows: %APPDATA%\RPNCalc\conversions.csv
 ///   macOS:   ~/Library/Application Support/RPNCalc/conversions.csv
-/// The file is created with the original 7 conversions if it does not exist.
+/// The file is created from the built-in default list if it does not exist.
 /// </summary>
 public static class Conversions
 {
@@ -25,18 +25,22 @@ public static class Conversions
     public const double MlPerCubicInch = 16.387064;        // exact (2.54^3)
     public const double MlPerFluidOunce = 29.5735295625;   // exact (US fl oz = 1.8046875 in³)
 
-    /// <summary>The original program's conversions, in its menu order (used to create the CSV file).</summary>
-    public static IReadOnlyList<Conversion> Defaults { get; } =
-    [
-        new("Cubic Inches", "Fluid Ounces (US)", MlPerCubicInch / MlPerFluidOunce),
-        new("Cubic Inches", "Milliliters", MlPerCubicInch),
-        new("Fluid Ounces (US)", "Cubic Inches", 1.8046875),
-        new("Fluid Ounces (US)", "Milliliters", MlPerFluidOunce),
-        new("Milliliters", "Cubic Inches", 1.0 / MlPerCubicInch),
-        new("Milliliters", "Fluid Ounces (US)", 1.0 / MlPerFluidOunce),
-        // Grams (per piece) -> lbs. per M pieces ("M" = Roman numeral for 1,000); 2.2 kept exactly as in the original.
-        new("Grams", "lbs./M", 2.2),
-    ];
+    /// <summary>
+    /// Text of the default conversions.csv (src/RPNCalc.Engine/conversions.csv, embedded in the app).
+    /// It is written verbatim when the user's file does not exist yet.
+    /// </summary>
+    public static string DefaultCsv { get; } = ReadDefaultCsv();
+
+    /// <summary>The default conversions, in file order (parsed from <see cref="DefaultCsv"/>).</summary>
+    public static IReadOnlyList<Conversion> Defaults { get; } = Parse(DefaultCsv).Items;
+
+    private static string ReadDefaultCsv()
+    {
+        using var s = typeof(Conversions).Assembly.GetManifestResourceStream("RPNCalc.Engine.conversions.csv")
+            ?? throw new InvalidOperationException("Embedded conversions.csv is missing.");
+        using var r = new StreamReader(s, Encoding.UTF8);
+        return r.ReadToEnd();
+    }
 
     /// <summary>conversions.csv in the same folder as the given (or default) settings.json.</summary>
     public static string GetPath(string? settingsPath = null) =>
@@ -94,7 +98,7 @@ public static class Conversions
             if (!File.Exists(path))
             {
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, ToCsv(Defaults), new UTF8Encoding(false));
+                File.WriteAllText(path, DefaultCsv, new UTF8Encoding(false));
             }
             var (items, warnings) = Parse(File.ReadAllText(path));
             return new ConversionTable(items, warnings, path);
@@ -127,7 +131,7 @@ public static class Conversions
             comma in quotes. Blank lines, lines starting with # and the
             From,To,Factor header are ignored. Edits take effect the next
             time you open the menu; Conversions → Edit Conversions...
-            opens the file. Delete it to get the original 7 back.
+            opens the file. Delete it to get the built-in list back.
             """.TrimEnd());
         if (table.Warnings.Count > 0)
         {

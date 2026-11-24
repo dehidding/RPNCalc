@@ -180,9 +180,10 @@ public sealed class MainWindowTests : IDisposable
         Assert.Equal(["0", "5", "1", "6", "2", "7", "3", "8", "4", "9"], dec.Items.OfType<MenuItem>().Select(m => (string)m.Header!));
         Assert.True(Find(dec, "4").IsChecked);
         var conv = Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Select(m => (string)m.Header!).ToArray();
-        Assert.Equal(8, conv.Length);                       // 7 from the default CSV + Edit Conversions...
+        Assert.Equal(27, conv.Length);                      // 26 from the default CSV + Edit Conversions...
         Assert.Equal("Grams → lbs./M", conv[6]);
-        Assert.Equal("Edit Conversions...", conv[7]);
+        Assert.Equal("Specific Gravity → Cubic Inches", conv[25]);
+        Assert.Equal("Edit Conversions...", conv[26]);
         Assert.True(File.Exists(Path.Combine(_dir, "conversions.csv")));   // created next to settings.json
         Assert.True(Find(w.Menu, "Show Stack").IsChecked);
         Assert.True(Find(Find(w.Menu, "Format Type"), "Fixed").IsChecked);
@@ -327,6 +328,43 @@ public sealed class MainWindowTests : IDisposable
         Directory.CreateDirectory(outDir);
         frame!.Save(Path.Combine(outDir, "mainwindow.png"));
         Assert.True(frame.PixelSize.Width >= 200);
+    }
+
+    [AvaloniaFact]
+    public void KeyLabelsAreLargeBoldAndFitNarrowWindow()
+    {
+        var (w, _) = Open();
+        w.Width = 200;                                   // minimum width: narrowest keys
+        w.CaptureRenderedFrame();                        // let the headless window apply the new size
+        w.UpdateLayout();
+        Assert.True(w.Buttons.Single(b => b.Content as string == "X<>Y").Bounds.Width < 40);
+        var textKeys = w.Buttons.Where(b => b.Content is string).ToList();
+        Assert.Equal(25, textKeys.Count);                // every key except the two roll arrows
+        foreach (var b in textKeys)
+        {
+            Assert.Equal(MainWindow.ButtonFontSize, b.FontSize);
+            Assert.True(b.FontSize >= 16);
+            Assert.Equal(Avalonia.Media.FontWeight.Bold, b.FontWeight);
+            var label = b.GetVisualDescendants().OfType<TextBlock>().Single();
+            Assert.Equal(Avalonia.Media.FontWeight.Bold, label.FontWeight);
+            var shown = label.TranslatePoint(new Point(label.Bounds.Width, 0), b)!.Value;
+            var start = label.TranslatePoint(new Point(0, 0), b)!.Value;
+            Assert.True(start.X >= 0 && shown.X <= b.Bounds.Width, $"{b.Content}: {start.X}..{shown.X} of {b.Bounds.Width}");
+        }
+        // "X<>Y" and "y^x" shrink as needed and stay on one line.
+        foreach (var name in new[] { "X<>Y", "y^x" })
+        {
+            var tb = textKeys.Single(b => (string)b.Content! == name).GetVisualDescendants().OfType<TextBlock>().Single();
+            Assert.Equal(Avalonia.Media.TextWrapping.NoWrap, tb.TextWrapping);
+            Assert.True(tb.Bounds.Height < 2 * tb.FontSize, $"{name} wrapped: {tb.Bounds}");
+        }
+        string snapDir = Environment.GetEnvironmentVariable("RPNCALC_SNAPSHOT_DIR") ?? _dir;
+        Directory.CreateDirectory(snapDir);
+        w.CaptureRenderedFrame()!.Save(Path.Combine(snapDir, "mainwindow-narrow.png"));
+        // Digits keep the full size; long labels may shrink only as far as needed.
+        var seven = textKeys.Single(b => (string)b.Content! == "7");
+        var vb = seven.GetVisualDescendants().OfType<Viewbox>().Single();
+        Assert.Equal(vb.Child!.Bounds.Height, vb.Bounds.Height, 1);
     }
 
     [AvaloniaFact]

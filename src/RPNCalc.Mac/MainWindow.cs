@@ -154,6 +154,27 @@ public sealed class MainWindow : Window
         _pStack.Children.Add(p);
     }
 
+    /// <summary>Key label size: about 62% of the 26 px key height.</summary>
+    internal const double ButtonFontSize = 16;
+
+    /// <summary>
+    /// Shows a text label at the button's (large, bold) font, scaled down only when the key is too narrow
+    /// for it, so labels like "Last X" never clip on a narrow window.
+    /// </summary>
+    private static readonly IDataTemplate FittedLabel = new FuncDataTemplate<string>((text, _) => new Viewbox
+    {
+        Stretch = Stretch.Uniform,
+        StretchDirection = StretchDirection.DownOnly,
+        Margin = new Thickness(2, 1),            // just clear of the 1 px border: long labels shrink as little as possible
+        Child = new TextBlock
+        {
+            Text = text,
+            TextWrapping = TextWrapping.NoWrap,      // never break "X<>Y" / "y^x" onto two lines
+            TextTrimming = TextTrimming.None,
+            VerticalAlignment = VerticalAlignment.Center,
+        },
+    });
+
     private Button MakeButton(string text, CalcCommand cmd, string tip)
     {
         var b = new Button
@@ -166,7 +187,8 @@ public sealed class MainWindow : Window
             Margin = new Thickness(Gap / 2),
             FontFamily = RegisterFont,
             FontWeight = FontWeight.Bold,
-            FontSize = 11,
+            FontSize = ButtonFontSize,         // large bold labels (was 11); roll arrows are sized separately
+            ContentTemplate = FittedLabel,
             CornerRadius = new CornerRadius(3),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
@@ -204,6 +226,7 @@ public sealed class MainWindow : Window
         {
             RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor) { AncestorType = typeof(ContentPresenter) },
         });
+        b.ContentTemplate = null;          // the arrow keeps its own size; no text label template
         b.Content = path;
         AutomationProperties.SetName(b, name);
     }

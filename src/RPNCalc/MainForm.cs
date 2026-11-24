@@ -91,7 +91,7 @@ internal sealed class MainForm : Form
 
     private NoFocusButton MakeButton(string text, CalcCommand cmd, string tip)
     {
-        var b = new NoFocusButton { Text = text };
+        var b = new NoFocusButton { Label = text };
         b.Click += (_, _) => Run(cmd);
         _tips.SetToolTip(b, tip);
         return b;
@@ -106,8 +106,8 @@ internal sealed class MainForm : Form
             if (glyph != ButtonGlyph.None)
             {
                 // Face shows only a drawn bold arrow; the name stays for screen readers.
+                b.Label = "";
                 b.AccessibleName = text;
-                b.Text = "";
                 b.Glyph = glyph;
             }
             _keypad.Add((b, row, col, span));
@@ -434,7 +434,7 @@ internal sealed class MainForm : Form
                 xRow[i].Bounds = new Rectangle(left, by, right - left, btnH);
                 bx += units[i] * unit + gap;
             }
-            foreach (var b in new[] { _btnEnter, _btnChs, _btnLastX, _btnBack }) b.Font = _btnFont;
+            foreach (var b in xRow) b.Font = _btnFont;
             _pMain.Bounds = new Rectangle(0, y, w, by + btnH + m);
             y = _pMain.Bottom;
 
@@ -470,12 +470,17 @@ internal sealed class MainForm : Form
         UpdateDisplay();
     }
 
+    /// <summary>Key label size in logical pixels for a 26 px key.</summary>
+    internal const float ButtonFontPx = 16f;
+
     private void ReplaceFonts(float s)
     {
         // Sizes are points at 96 DPI converted to pixels, then scaled for the monitor.
         _regFont = UiFonts.Get("Arial", _settings.FontSize * 96f / 72f * s, FontStyle.Bold, GraphicsUnit.Pixel);
         _tagFont = UiFonts.Get("Arial", 9f * 96f / 72f * s, FontStyle.Bold, GraphicsUnit.Pixel);
-        _btnFont = UiFonts.Get("Arial", 8.25f * 96f / 72f * s, FontStyle.Bold, GraphicsUnit.Pixel);
+        // Key labels: large bold text, about 62% of the 26 px key height (was 11 px). NoFocusButton draws
+        // the label itself and shrinks it only when the key is too narrow for it.
+        _btnFont = UiFonts.Get("Arial", ButtonFontPx * s, FontStyle.Bold, GraphicsUnit.Pixel);
         foreach (Control c in AllControls(this))
             if (c is Label or Button) c.Font = c is Button ? _btnFont : (c == _tagT || c == _tagZ || c == _tagY || c == _tagX ? _tagFont : _regFont);
     }
