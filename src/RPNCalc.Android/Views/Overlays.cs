@@ -24,7 +24,7 @@ internal static class Overlays
         {
             var asm = typeof(Overlays).Assembly;
             return asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
-                   ?? asm.GetName().Version?.ToString() ?? "1.2.0";
+                   ?? asm.GetName().Version?.ToString() ?? "1.2.1";
         }
     }
 
@@ -38,11 +38,13 @@ internal static class Overlays
         catch { return null; }
     }
 
-    internal static Button BarButton(string text, Action onClick)
+    /// <summary>Top-bar icon button (52 x 52 touch target) showing a vector icon.</summary>
+    internal static Button BarButton(string iconData, Action onClick)
     {
         var b = new Button
         {
-            Content = text, FontSize = 22, FontWeight = FontWeight.Bold, Width = 52, Height = 52,
+            Content = Icons.Sized(iconData, 26, Brushes.White, 2.4), Width = 52, Height = 52, Padding = new Thickness(0),
+            CornerRadius = new CornerRadius(26),
             Background = Brushes.Transparent, Foreground = Brushes.White, Focusable = false, IsTabStop = false,
             HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
         };
@@ -53,7 +55,7 @@ internal static class Overlays
     /// <summary>A page with a top bar (← back + title) covering the calculator. Back gesture also closes it.</summary>
     internal static Control Page(string title, Control body, Action close)
     {
-        var back = BarButton("←", close);
+        var back = BarButton(Icons.BackData, close);   // vector arrow, not the "←" glyph
         Avalonia.Automation.AutomationProperties.SetName(back, "Back");
         var bar = new DockPanel { Background = BarBrush, Height = 52 };
         DockPanel.SetDock(back, Dock.Left);
@@ -139,7 +141,8 @@ internal static class Overlays
 internal sealed class ConversionsEditor : DockPanel
 {
     private readonly TextBox _text;
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, FontSize = 13, Margin = new Thickness(0, 4) };
+    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, FontSize = 13, VerticalAlignment = VerticalAlignment.Top };
+    private readonly ContentControl _statusIcon = new() { Width = 18, Height = 18, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Top };
     private readonly Func<IStorageProvider?> _storage;
 
     public event Action<string>? Saved;
@@ -181,27 +184,36 @@ internal sealed class ConversionsEditor : DockPanel
                    + "quote names that contain a comma; # starts a comment.",
             TextWrapping = TextWrapping.Wrap, FontSize = 13, Foreground = Brushes.DimGray,
         };
-        var top = new StackPanel { Margin = new Thickness(12, 12, 12, 0), Children = { buttons, hint, _status } };
+        var statusRow = new DockPanel { Margin = new Thickness(0, 4) };
+        DockPanel.SetDock(_statusIcon, Dock.Left);
+        statusRow.Children.Add(_statusIcon);
+        statusRow.Children.Add(_status);
+        var top = new StackPanel { Margin = new Thickness(12, 12, 12, 0), Children = { buttons, hint, statusRow } };
         DockPanel.SetDock(top, Dock.Top);
         Children.Add(top);
         Children.Add(new Border { Margin = new Thickness(12, 4, 12, 12), Child = _text });
         Validate();
     }
 
-    internal void ShowStatus(string message, bool error)
+    internal void ShowStatus(string message, bool error, bool icon = true)
     {
         _status.Text = message;
         _status.Foreground = error ? Brushes.Firebrick : Brushes.DarkGreen;
+        // Vector check mark / warning triangle (the ✓ and ⚠ characters are not in Android's Roboto).
+        _statusIcon.Content = !icon ? null
+            : error ? Icons.Warning(18, Brushes.Firebrick)
+            : Icons.Sized(Icons.CheckData, 18, Brushes.DarkGreen, 2.8);
+        _statusIcon.IsVisible = icon;
     }
 
     private void Validate()
     {
         var (items, warnings) = Conversions.Parse(Text);
         if (warnings.Count == 0)
-            ShowStatus($"✓ {items.Count} conversion(s), no problems.", error: false);
+            ShowStatus($"{items.Count} conversion(s), no problems.", error: false);
         else
         {
-            var sb = new StringBuilder($"⚠ {items.Count} conversion(s); {warnings.Count} line(s) will be skipped:");
+            var sb = new StringBuilder($"{items.Count} conversion(s); {warnings.Count} line(s) will be skipped:");
             foreach (var w in warnings.Take(8)) sb.Append('\n').Append(w);
             if (warnings.Count > 8) sb.Append($"\n… and {warnings.Count - 8} more.");
             ShowStatus(sb.ToString(), error: true);

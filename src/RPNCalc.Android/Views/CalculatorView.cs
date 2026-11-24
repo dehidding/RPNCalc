@@ -68,10 +68,13 @@ public sealed class CalculatorView : UserControl
         Focusable = true;
 
         // ---- top bar: title + ⋮ menu button
+        // Hamburger icon drawn as vector geometry (a "⋮" text glyph showed as a tofu box on devices whose font lacks it).
         _menuButton = new Button
         {
-            Content = "⋮", FontSize = 26, FontWeight = FontWeight.Bold, Focusable = false, IsTabStop = false,
-            Width = 48, Height = 48, Padding = new Thickness(0), Background = Brushes.Transparent,
+            Content = Icons.Sized(Icons.MenuData, 26, Brushes.White, 2.4),
+            Focusable = false, IsTabStop = false,
+            Width = 52, Height = 52, Padding = new Thickness(0), Background = Brushes.Transparent,
+            CornerRadius = new CornerRadius(26),
             HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
         };
         AutomationProperties.SetName(_menuButton, "Menu");
@@ -82,7 +85,6 @@ public sealed class CalculatorView : UserControl
             Margin = new Thickness(16, 0, 0, 0), Foreground = Brushes.White,
         };
         var bar = new DockPanel { Background = new SolidColorBrush(Color.FromRgb(0x3A, 0x3F, 0x46)), Height = 52 };
-        _menuButton.Foreground = Brushes.White;
         DockPanel.SetDock(_menuButton, Dock.Right);
         bar.Children.Add(_menuButton);
         bar.Children.Add(title);
@@ -341,7 +343,8 @@ public sealed class CalculatorView : UserControl
         foreach (var conv in _conversions.Items)
         {
             var c = conv;
-            var mi = new MenuItem { Header = c.MenuText };
+            var mi = new MenuItem { Header = Icons.ConversionHeader(c) };   // vector arrow instead of "→"
+            AutomationProperties.SetName(mi, c.Name);
             mi.Click += (_, _) => { Report(_calc.Convert(c.Factor)); SaveSoon(); };
             _convMenu.Items.Add(mi);
         }
@@ -350,7 +353,11 @@ public sealed class CalculatorView : UserControl
         _convMenu.Items.Add(new Separator());
         if (_conversions.Warnings.Count > 0)
         {
-            var warn = new MenuItem { Header = $"⚠ {_conversions.Warnings.Count} line(s) skipped" };
+            var warn = new MenuItem
+            {
+                Header = $"{_conversions.Warnings.Count} line(s) skipped",
+                Icon = Icons.Warning(18, Brushes.DarkOrange),
+            };
             warn.Click += (_, _) => EditConversions();
             _convMenu.Items.Add(warn);
         }

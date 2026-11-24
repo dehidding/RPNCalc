@@ -4,12 +4,18 @@ namespace RPNCalc.Droid;
 
 internal static class AndroidHelpText
 {
+    /// <summary>Replaces the few symbols the engine's shared help/menu text uses that Android fonts lack.</summary>
+    internal static string Ascii(string text) => text.Replace("→", "->").Replace("←", "<-")
+        .Replace("▲", "Up").Replace("▼", "Down").Replace("⋮", "menu").Replace("⚠", "!").Replace("✓", "OK");
+
     public static string Build(ConversionTable conversions)
     {
         string conv = Conversions.HelpSection(conversions, "(app storage)/" + Conversions.FileName)
             .Replace("opens the file. Delete it to get the built-in list back.",
                      "opens the in-app editor (Reset to defaults restores the list).");
-        return $$"""
+        // Only characters that Android's Roboto / Droid Sans Mono contain: arrows and symbols such as
+        // "→", "▲" or "⋮" are not in those fonts and could show as tofu boxes (see Icons).
+        return Ascii($$"""
 RPN CALCULATOR
 ==============
 An HP-style Reverse Polish Notation (RPN) calculator with a
@@ -19,7 +25,7 @@ HOW RPN WORKS
 -------------
 Type the first number, tap Enter, type the second number,
 then tap the operation. Example:  (3 + 4) × 5
-    3  Enter  4  +  5  ×      → 35
+    3  Enter  4  +  5  ×      = 35
 
 - Enter copies X into Y (the stack moves up); the next
   number you type replaces X.
@@ -39,9 +45,11 @@ KEYS
   y^x                        Y raised to the power X
   x²   √x                    Square, square root of X
   π                          Pi
-  X<>Y  ▲  ▼                 Exchange, Roll Up, Roll Down
+  X<>Y  Up  Down             Exchange, Roll Up, Roll Down
+                             (the keys with the arrows)
 
-MENU (⋮ button, or long-press the display)
+MENU (menu button with three lines at the top right,
+      or long-press the display)
 ----
   Show Stack       Show/hide the T, Z, Y registers
   Show Keypad      Show/hide the keypad
@@ -84,6 +92,6 @@ goes to the background. Clearing the app's storage in Android
 Settings restores the defaults.
 
 Back (button or gesture) closes Help, About and the editor.
-""";
+""");
     }
 }

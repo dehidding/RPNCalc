@@ -77,9 +77,9 @@ It works the same way as on Windows (see [Settings file](#settings-file)). To re
 Later test builds signed with the same key install over this one and keep your settings. A build signed with a different key must be uninstalled first, which deletes the settings.
 
 ### Differences from the desktop versions
-- **The menu** opens from the **⋮** button in the top bar, or by **long-pressing the display**. It has the same items as on the desktop, plus **Copy X** and **Paste X**. **Stay on Top** is left out because Android apps run full screen and have no overlapping windows.
+- **The menu** opens from the **menu button** (three lines, top right), or by **long-pressing the display**. It has the same items as on the desktop, plus **Copy X** and **Paste X**. **Stay on Top** is left out because Android apps run full screen and have no overlapping windows.
 - **Full-screen layout:** the keys stretch to fill the screen. In landscape the registers move to the left and the keys to the right. **Font Size** changes the register digits as on the desktop.
-- **Help and About** open as full-screen pages. The **←** button, the Android **Back** button/gesture or Esc closes them.
+- **Help and About** open as full-screen pages. The **back arrow** in the top bar, the Android **Back** button/gesture or Esc closes them.
 - **Conversions → Edit Conversions...** opens an in-app CSV editor. Each skipped line is listed with its reason while you type. The editor has **Reset to defaults**, plus **Import...** and **Export...** buttons that use the system file picker (Downloads, Drive, etc.).
 - **Storage:** `settings.json` and `conversions.csv` are kept in the app's private storage. They are saved shortly after every change and whenever the app goes to the background. Clearing the app's storage in Android Settings restores the defaults.
 - **Hardware keyboard:** a USB or Bluetooth keyboard uses the same keys as the desktop (digits, operators, Enter, Backspace, Esc, S/L/X/P, ↑/↓, Ctrl+C/V, F1). The mapping is shared with the macOS version (`src/Shared/KeyMapper.cs`).
