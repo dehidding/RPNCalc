@@ -37,6 +37,8 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <InternalsVisibleTo Include="RPNCalc.Mac.Tests" />
+    <!-- Source shared with the Android front end -->
+    <Compile Include="..\Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

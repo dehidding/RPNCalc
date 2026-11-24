@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Android front end (Avalonia). Needs the .NET 10 SDK with the "android" workload, an Android SDK
+    (platform 36, build-tools 36) and a JDK 17/21. Not part of RPNCalc.sln, so machines without the
+    workload can still build and test the solution. See README "Android" and build/android/build-android.sh.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>RPNCalc.Android</AssemblyName>
+    <RootNamespace>RPNCalc.Droid</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <ApplicationId>com.dehidding.rpncalc</ApplicationId>
+    <ApplicationTitle>RPNCalc</ApplicationTitle>
+    <ApplicationDisplayVersion>1.2.1</ApplicationDisplayVersion>
+    <ApplicationVersion>2</ApplicationVersion>
+
+    <Product>RPN Calculator</Product>
+    <Version>1.2.1</Version>
+    <Copyright>Copyright © David Hidding 2026</Copyright>
+    <Description>HP-style RPN calculator - Android (Avalonia) version of the 1997 Delphi RPNCalc</Description>
+
+    <!-- Sideloadable APK for 64-bit ARM phones/tablets and x86-64 emulators / Chromebooks. -->
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+
+    <!-- Settings use reflection-based System.Text.Json: keep the engine untrimmed and reflection enabled. -->
+    <TrimMode>partial</TrimMode>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" Version="11.3.23" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.23" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RPNCalc.Engine\RPNCalc.Engine.csproj" />
+    <TrimmerRootAssembly Include="RPNCalc.Engine" RootMode="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The views are platform-neutral Avalonia code: drop the Android implicit usings (Button, Application clash). -->
+    <Using Remove="Android.App" />
+    <Using Remove="Android.Widget" />
+    <Using Remove="Android.OS" />
+    <Using Remove="Android.Views" />
+    <Using Remove="Android.Content" />
+    <Using Remove="Android.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Code shared with the macOS front end (keyboard mapping, arrow shapes). -->
+    <Compile Include="..\Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\RPNCalc.Mac\Assets\rpncalc.png" Link="Assets\rpncalc.png" />
+  </ItemGroup>
+
+</Project>
