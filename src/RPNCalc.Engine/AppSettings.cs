@@ -54,8 +54,16 @@ public static class SettingsStore
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
     };
 
-    public static string DefaultPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPNCalc", "settings.json");
+    /// <summary>
+    /// Windows: %APPDATA%\RPNCalc\settings.json (unchanged).
+    /// macOS:   ~/Library/Application Support/RPNCalc/settings.json.
+    /// </summary>
+    public static string DefaultPath => GetDefaultPath(OperatingSystem.IsMacOS());
+
+    public static string GetDefaultPath(bool macOS) => macOS
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile, Environment.SpecialFolderOption.DoNotVerify),
+                       "Library", "Application Support", "RPNCalc", "settings.json")
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify), "RPNCalc", "settings.json");
 
     public static string Serialize(AppSettings s) => JsonSerializer.Serialize(s, Options);
 

@@ -300,6 +300,21 @@ public class SettingsTests
     }
 
     [Fact]
+    public void DefaultPathIsPlatformSpecific()
+    {
+        string win = SettingsStore.GetDefaultPath(macOS: false);
+        Assert.Equal(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData,
+            Environment.SpecialFolderOption.DoNotVerify), "RPNCalc", "settings.json"), win);
+        string mac = SettingsStore.GetDefaultPath(macOS: true);
+        // Never a relative path, even when the folder does not exist yet (fresh profile).
+        Assert.True(Path.IsPathRooted(win), win);
+        Assert.True(Path.IsPathRooted(mac), mac);
+        Assert.EndsWith(Path.Combine("Library", "Application Support", "RPNCalc", "settings.json"), mac);
+        Assert.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), mac);
+        Assert.Equal(SettingsStore.GetDefaultPath(OperatingSystem.IsMacOS()), SettingsStore.DefaultPath);
+    }
+
+    [Fact]
     public void SaveAndLoadFile()
     {
         string dir = Path.Combine(Path.GetTempPath(), "rpncalc_test_" + Guid.NewGuid().ToString("N"));
