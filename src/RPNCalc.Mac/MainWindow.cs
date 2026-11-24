@@ -39,6 +39,12 @@ public sealed class MainWindow : Window
     private readonly ContextMenu _menu = new();
     private MenuItem _miShowStack = null!, _miShowKeypad = null!, _miStayOnTop = null!, _miFixed = null!, _miScientific = null!;
     private readonly MenuItem[] _miDecimals = new MenuItem[10];
+    private readonly MenuItem _convMenu = new() { Header = "Conversions" };
+    private ConversionTable _conversions = new([], [], "");
+
+    /// <summary>conversions.csv, next to settings.json.</summary>
+    internal string ConversionsPath => Conversions.GetPath(_settingsPath);
+    internal ConversionTable LoadedConversions => _conversions;
 
     private HelpWindow? _help;
     private bool _saved;
@@ -301,12 +307,8 @@ public sealed class MainWindow : Window
             Items = { Item("Larger", () => ChangeFontSize(+2)), Item("Smaller", () => ChangeFontSize(-2)) },
         };
 
-        var convMenu = new MenuItem { Header = "Conversions" };
-        foreach (var conv in Conversions.All)
-        {
-            var c = conv;
-            convMenu.Items.Add(Item(c.Name.Replace("->", "→"), () => Report(_calc.Convert(c.Factor))));
-        }
+        RebuildConversionsMenu();
+        var convMenu = _convMenu;
 
         var help = Item("Help", ShowHelp);
         help.InputGesture = new KeyGesture(Key.F1);
@@ -320,8 +322,51 @@ public sealed class MainWindow : Window
         _menu.Items.Add(new Separator());
         _menu.Items.Add(help);
         _menu.Items.Add(Item("About", ShowAbout));
-        _menu.Opening += (_, _) => SyncMenuChecks();
+        _menu.Opening += (_, _) => { RebuildConversionsMenu(); SyncMenuChecks(); };
         SyncMenuChecks();
+    }
+
+    /// <summary>Re-reads conversions.csv so edits show up the next time the menu opens.</summary>
+    internal void RebuildConversionsMenu()
+    {
+        _conversions = Conversions.Load(ConversionsPath);
+        _convMenu.Items.Clear();
+        foreach (var conv in _conversions.Items)
+        {
+            var c = conv;
+            var mi = new MenuItem { Header = c.MenuText };
+            ToolTip.SetTip(mi, "× " + c.Factor.ToString("R", CultureInfo.InvariantCulture));
+            mi.Click += (_, _) => Report(_calc.Convert(c.Factor));
+            _convMenu.Items.Add(mi);
+        }
+        if (_conversions.Items.Count == 0)
+            _convMenu.Items.Add(new MenuItem { Header = "(no conversions in the file)", IsEnabled = false });
+        _convMenu.Items.Add(new Separator());
+        if (_conversions.Warnings.Count > 0)
+        {
+            var warn = new MenuItem { Header = $"⚠ {_conversions.Warnings.Count} line(s) skipped (see Help)" };
+            warn.Click += (_, _) => { _help?.Close(); ShowHelp(); };
+            _convMenu.Items.Add(warn);
+        }
+        var edit = new MenuItem { Header = "Edit Conversions..." };
+        edit.Click += (_, _) => EditConversions();
+        _convMenu.Items.Add(edit);
+    }
+
+    private void EditConversions()
+    {
+        try
+        {
+            if (!File.Exists(ConversionsPath)) Conversions.Load(ConversionsPath);   // creates the default file
+            if (OperatingSystem.IsMacOS())
+                System.Diagnostics.Process.Start("open", ["-t", ConversionsPath]);   // default text editor (TextEdit)
+            else
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ConversionsPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorHandler($"Could not open {ConversionsPath}: {ex.Message}");
+        }
     }
 
     private void SyncMenuChecks()
@@ -360,7 +405,8 @@ public sealed class MainWindow : Window
     {
         if (_help is null || !_help.IsVisible)
         {
-            _help = new HelpWindow();
+            _conversions = Conversions.Load(ConversionsPath);
+            _help = new HelpWindow(_conversions);
             _help.Closed += (_, _) => _help = null;
             _help.Show(this);
         }

@@ -85,6 +85,28 @@ It works the same way as on Windows (see [Settings file](#settings-file)). To re
 - Help window: press **F1** or use right-click → Help.
 
 ### Conversions (X is multiplied by the factor)
+The Conversions menu is built from a 3-column CSV file stored next to `settings.json`:
+
+```
+%APPDATA%\RPNCalc\conversions.csv                         (Windows)
+~/Library/Application Support/RPNCalc/conversions.csv     (macOS)
+```
+
+- Columns: **From** (source unit), **To** (target unit), **Factor**. Each line appears in the menu as "From → To", and choosing it multiplies X by Factor.
+- Use `.` as the decimal point. Put a name that contains a comma in double quotes. Blank lines, lines starting with `#`, and a header line on the first row are ignored.
+- The file is re-read every time the menu opens, so edits take effect without a restart. **Conversions → Edit Conversions...** opens the file: on Windows in the app associated with `.csv` files, on macOS in the default text editor.
+- If a line is invalid it is skipped, and the menu shows "⚠ N line(s) skipped". Help lists each skipped line and the reason.
+- If the file doesn't exist, it is created with the original 7 conversions. Delete it to get them back.
+
+```csv
+From,To,Factor
+Grams,lbs./M,2.2
+Inches,Centimeters,2.54
+"Feet, US survey",Meters,0.3048006096
+```
+
+The default file contains:
+
 | Conversion | Factor |
 |---|---|
 | Cubic Inches → Fluid Ounces (US) | 16.387064 / 29.5735295625 (≈ 0.5541125541) |
@@ -131,6 +153,8 @@ The file contains the window position and width, decimals, Fixed/Scientific form
 - If the saved position is no longer on any monitor, the window is moved onto the primary screen.
 - To reset everything, delete the file.
 
+The conversions list is kept separately in `conversions.csv` in the same folder (see [Conversions](#conversions-x-is-multiplied-by-the-factor)).
+
 ## Project layout
 ```
 RPNCalc.sln
@@ -162,4 +186,4 @@ dotnet test                       # engine tests + headless macOS GUI tests
 ```
 
 ## License
-Apache License 2.0. See [LICENSE](LICENSE).
+Copyright © David Hidding 2026. Apache License 2.0. See [LICENSE](LICENSE).

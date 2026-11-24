@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using RPNCalc.Engine;
 using RPNCalc.Mac;
 
@@ -178,10 +179,48 @@ public sealed class MainWindowTests : IDisposable
         var dec = Find(w.Menu, "Decimal Places");
         Assert.Equal(["0", "5", "1", "6", "2", "7", "3", "8", "4", "9"], dec.Items.OfType<MenuItem>().Select(m => (string)m.Header!));
         Assert.True(Find(dec, "4").IsChecked);
-        Assert.Equal(7, Find(w.Menu, "Conversions").Items.Count);
-        Assert.Equal("Grams → lbs./M", Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Last().Header);
+        var conv = Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Select(m => (string)m.Header!).ToArray();
+        Assert.Equal(8, conv.Length);                       // 7 from the default CSV + Edit Conversions...
+        Assert.Equal("Grams → lbs./M", conv[6]);
+        Assert.Equal("Edit Conversions...", conv[7]);
+        Assert.True(File.Exists(Path.Combine(_dir, "conversions.csv")));   // created next to settings.json
         Assert.True(Find(w.Menu, "Show Stack").IsChecked);
         Assert.True(Find(Find(w.Menu, "Format Type"), "Fixed").IsChecked);
+    }
+
+    [AvaloniaFact]
+    public void ConversionsMenuFollowsTheCsvFile()
+    {
+        Directory.CreateDirectory(_dir);
+        string csv = Path.Combine(_dir, "conversions.csv");
+        File.WriteAllText(csv, "From,To,Factor\nInches,Centimeters,2.54\nbad line\n");
+        var (w, _) = Open();
+        var headers = Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Select(m => (string)m.Header!).ToArray();
+        Assert.Equal(["Inches → Centimeters", "⚠ 1 line(s) skipped (see Help)", "Edit Conversions..."], headers);
+
+        Type(w, "10");
+        ClickMenu(Find(Find(w.Menu, "Conversions"), "Inches → Centimeters"));
+        Assert.Equal("25.4000", w.XText);
+
+        // Edit the file while running: the next menu rebuild picks it up without a restart.
+        File.WriteAllText(csv, "Grams,lbs./M,2.2\nFeet,Meters,0.3048\n");
+        w.RebuildConversionsMenu();
+        headers = Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Select(m => (string)m.Header!).ToArray();
+        Assert.Equal(["Grams → lbs./M", "Feet → Meters", "Edit Conversions..."], headers);
+        ClickMenu(Find(Find(w.Menu, "Conversions"), "Grams → lbs./M"));
+        Assert.Equal("55.8800", w.XText);   // 25.4 × 2.2
+        Assert.Contains("Feet → Meters", HelpText.Build(w.LoadedConversions));
+    }
+
+    [AvaloniaFact]
+    public void AboutShowsCopyright()
+    {
+        var about = new AboutWindow();
+        about.Show();
+        Dispatcher.UIThread.RunJobs();
+        var texts = about.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+        Assert.Contains("Copyright © David Hidding 2026", texts);
+        about.Close();
     }
 
     [AvaloniaFact]
@@ -336,9 +375,10 @@ public sealed class MainWindowTests : IDisposable
     [AvaloniaFact]
     public void HelpTextMentionsMacKeys()
     {
-        string t = HelpText.Build();
+        string t = HelpText.Build(new ConversionTable(Conversions.Defaults, [], ""));
         Assert.Contains("Cmd+Q", t);
         Assert.Contains("Library/Application Support/RPNCalc/settings.json", t);
+        Assert.Contains("Library/Application Support/RPNCalc/conversions.csv", t);
         Assert.Contains("Grams → lbs./M", t);
     }
 }

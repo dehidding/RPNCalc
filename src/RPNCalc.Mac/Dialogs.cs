@@ -89,7 +89,7 @@ public sealed class AboutWindow : DialogBase
             {
                 new TextBlock { Text = "RPN Calculator", FontSize = 16, FontWeight = FontWeight.Bold },
                 new TextBlock { Text = "Version " + version },
-                new TextBlock { Text = "Copyright: original Delphi version 1997;\nre-implementation 2026", TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = "Copyright © David Hidding 2026", TextWrapping = TextWrapping.Wrap },
                 new TextBlock
                 {
                     Text = "HP-style Reverse Polish Notation calculator for macOS. Settings and stack are saved in "
@@ -116,7 +116,7 @@ public sealed class AboutWindow : DialogBase
 /// <summary>Modeless Help window (F1, Cmd+?, right-click → Help, or app menu → RPNCalc Help).</summary>
 public sealed class HelpWindow : DialogBase
 {
-    public HelpWindow()
+    public HelpWindow(ConversionTable conversions)
     {
         Title = "RPN Calculator Help";
         Width = 620; Height = 620;
@@ -126,7 +126,7 @@ public sealed class HelpWindow : DialogBase
         close.HorizontalAlignment = HorizontalAlignment.Right;
         var body = new SelectableTextBlock
         {
-            Text = HelpText.Build(),
+            Text = HelpText.Build(conversions),
             FontFamily = new FontFamily("Menlo, Monaco, Consolas, DejaVu Sans Mono, monospace"),
             FontSize = 12.5,
             Margin = new Thickness(12),

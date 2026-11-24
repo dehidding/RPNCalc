@@ -52,7 +52,7 @@ for RID in osx-arm64 osx-x64; do
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>LSMinimumSystemVersion</key><string>$MINOS</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
-  <key>NSHumanReadableCopyright</key><string>Copyright (c) 1997-2026 David Hidding</string>
+  <key>NSHumanReadableCopyright</key><string>Copyright © David Hidding 2026</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict>

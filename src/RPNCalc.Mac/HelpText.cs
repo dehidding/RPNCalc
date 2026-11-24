@@ -4,10 +4,9 @@ namespace RPNCalc.Mac;
 
 internal static class HelpText
 {
-    public static string Build()
+    public static string Build(ConversionTable conversions)
     {
-        string conv = string.Join(Environment.NewLine, Conversions.All.Select(c =>
-            $"  {c.Name.Replace("->", "→"),-36} × {c.Factor:0.##########}"));
+        string conv = Conversions.HelpSection(conversions, "~/Library/Application Support/RPNCalc/" + Conversions.FileName);
         return $$"""
 RPN CALCULATOR
 ==============
@@ -68,15 +67,14 @@ CONTEXT MENU (right-click, two-finger click or Ctrl+click)
   Format Type      Fixed (1234.5600) or Scientific (1.2346E+03)
   Font Size        Larger / Smaller register digits
   Conversions      Multiply X by a conversion factor
-                   (the old X is saved in Last X)
+                   (the old X is saved in Last X); the list
+                   comes from conversions.csv (see below)
   Help             This window
   About            Version information
 
 CONVERSIONS
 -----------
 {{conv}}
-  "lbs./M": grams per piece → pounds per M pieces
-  ("M" is the Roman numeral for 1,000; factor 2.2 as in 1997).
 
 ERRORS
 ------
