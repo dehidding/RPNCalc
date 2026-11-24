@@ -16,7 +16,7 @@
 
     <Product>RPN Calculator</Product>
     <Version>1.1.1</Version>
-    <Copyright>Original Delphi version (c) 1997; re-implementation 2026</Copyright>
+    <Copyright>Copyright © David Hidding 2026</Copyright>
     <Description>HP-style RPN calculator - macOS (Avalonia) version of the 1997 Delphi RPNCalc</Description>
 
     <!-- Publish: dotnet publish -r osx-arm64|osx-x64 -c Release (see build/package-mac.sh) -->

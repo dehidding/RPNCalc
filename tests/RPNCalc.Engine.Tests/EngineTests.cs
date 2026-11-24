@@ -90,7 +90,7 @@ public class StackTests
     public void LastXSavedBeforeConversion()
     {
         var c = Type("10");
-        Assert.Null(c.Convert(Conversions.GramsToLbsPerM.Factor));
+        Assert.Null(c.Convert(Conversions.Defaults.Single(x => x.To == "lbs./M").Factor));
         Assert.Equal(22, c.X, 12);
         Assert.Equal(10, c.LastX);
     }
@@ -202,31 +202,121 @@ public class StackTests
 
 public class ConversionTests
 {
+    private static double F(string from, string to) => Conversions.Defaults.Single(c => c.From == from && c.To == to).Factor;
+
     [Fact]
-    public void ExactFactors()
+    public void FactorsMatchTheSuppliedFile()
     {
-        Assert.Equal(16.387064, Conversions.CubicInchesToMilliliters.Factor);
-        Assert.Equal(29.5735295625, Conversions.FluidOuncesToMilliliters.Factor);
-        Assert.Equal(1.8046875, Conversions.FluidOuncesToCubicInches.Factor);
-        Assert.Equal(2.2, Conversions.GramsToLbsPerM.Factor);
-        Assert.Equal(0.554112554, Conversions.CubicInchesToFluidOunces.Factor, 9);
-        Assert.Equal(0.0610237441, Conversions.MillilitersToCubicInches.Factor, 10);
-        Assert.Equal(0.0338140227, Conversions.MillilitersToFluidOunces.Factor, 10);
+        Assert.Equal(16.387064, F("Cubic Inches", "Milliliters"));
+        Assert.Equal(29.57352956, F("Fluid Ounces (US)", "Milliliters"));
+        Assert.Equal(1.8046875, F("Fluid Ounces (US)", "Cubic Inches"));
+        Assert.Equal(2.2, F("Grams", "lbs./M"));                      // exactly 2.2, as in the original
+        Assert.Equal(0.0022, F("Grams", "lbs"));
+        Assert.Equal(0.5541125541125541, F("Cubic Inches", "Fluid Ounces (US)"));
+        Assert.Equal(0.061023744, F("Milliliters", "Cubic Inches"));
+        Assert.Equal(0.033814023, F("Milliliters", "Fluid Ounces (US)"));
+        Assert.Equal(0.03324, F("Cubic Inches", "LDPE  .920"));      // name kept verbatim (two spaces)
+        Assert.Equal(0.2836, F("Cubic Inches", "Steel"));
+        Assert.Equal(0.03612729, F("Specific Gravity", "Cubic Inches"));
     }
 
     [Fact]
     public void RoundTripsAreConsistent()
     {
-        Assert.Equal(1.0, Conversions.CubicInchesToFluidOunces.Factor * Conversions.FluidOuncesToCubicInches.Factor, 12);
-        Assert.Equal(1.0, Conversions.MillilitersToCubicInches.Factor * Conversions.CubicInchesToMilliliters.Factor, 12);
-        Assert.Equal(1.0, Conversions.MillilitersToFluidOunces.Factor * Conversions.FluidOuncesToMilliliters.Factor, 12);
+        Assert.Equal(1.0, F("Cubic Inches", "Fluid Ounces (US)") * F("Fluid Ounces (US)", "Cubic Inches"), 12);
+        Assert.Equal(1.0, F("Milliliters", "Cubic Inches") * F("Cubic Inches", "Milliliters"), 7);
+        Assert.Equal(1.0, F("Milliliters", "Fluid Ounces (US)") * F("Fluid Ounces (US)", "Milliliters"), 7);
     }
 
     [Fact]
     public void MenuOrderAndLabels()
     {
-        Assert.Equal(7, Conversions.All.Count);
-        Assert.Equal("Grams -> lbs./M", Conversions.All[^1].Name);
+        Assert.Equal(26, Conversions.Defaults.Count);
+        Assert.Equal("Cubic Inches → Fluid Ounces (US)", Conversions.Defaults[0].MenuText);
+        Assert.Equal("Grams -> lbs./M", Conversions.Defaults[6].Name);
+        Assert.Equal("Grams → lbs./M", Conversions.Defaults[6].MenuText);
+        Assert.Equal("Specific Gravity → Cubic Inches", Conversions.Defaults[^1].MenuText);
+        Assert.Empty(Conversions.Parse(Conversions.DefaultCsv).Warnings);
+    }
+
+    [Fact]
+    public void DefaultCsvRoundTripsExactly()
+    {
+        string csv = Conversions.ToCsv(Conversions.Defaults);
+        Assert.StartsWith("From,To,Factor\r\n", csv);
+        Assert.Contains("Grams,lbs./M,2.2\r\n", csv);
+        var (items, warnings) = Conversions.Parse(csv);
+        Assert.Empty(warnings);
+        Assert.Equal(Conversions.Defaults, items);   // record equality: names and bit-exact factors
+    }
+
+    [Fact]
+    public void ParsesThreeColumnsQuotesCommentsAndBlankLines()
+    {
+        var (items, warnings) = Conversions.Parse(
+            "\uFEFF# my list\n\nInches, Centimeters, 2.54\r\n\"Feet, US\",Meters,0.3048\n  Miles ,Kilometers,1.609344e0\n");
+        Assert.Empty(warnings);
+        Assert.Equal([new Conversion("Inches", "Centimeters", 2.54), new Conversion("Feet, US", "Meters", 0.3048),
+                      new Conversion("Miles", "Kilometers", 1.609344)], items);
+    }
+
+    [Fact]
+    public void HeaderOnlySkippedOnFirstLine()
+    {
+        var (items, warnings) = Conversions.Parse("Source,Target,Multiplier\nA,B,2\nC,D,x\n");
+        Assert.Equal([new Conversion("A", "B", 2)], items);
+        Assert.Equal(["Line 3: \"x\" is not a valid factor."], warnings);
+    }
+
+    [Theory]
+    [InlineData("A,B", "expected 3 fields")]
+    [InlineData("A,B,1,2", "expected 3 fields")]
+    [InlineData(",B,1", "must not be empty")]
+    [InlineData("A,B,0", "not a valid factor")]
+    [InlineData("A,B,1,5", "expected 3 fields")]   // comma decimal must be quoted -> 4 fields
+    [InlineData("A,B,NaN", "not a valid factor")]
+    public void BadLinesAreSkippedWithAWarning(string line, string message)
+    {
+        var (items, warnings) = Conversions.Parse("Grams,lbs./M,2.2\n" + line);
+        Assert.Single(items);
+        Assert.Contains(message, Assert.Single(warnings));
+        Assert.StartsWith("Line 2:", warnings[0]);
+    }
+
+    [Fact]
+    public void LoadCreatesDefaultFileThenReadsEdits()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "rpncalc_conv_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            string path = Conversions.GetPath(Path.Combine(dir, "settings.json"));
+            Assert.Equal(Path.Combine(dir, "conversions.csv"), path);
+            var t = Conversions.Load(path);
+            Assert.True(File.Exists(path));
+            Assert.Equal(Conversions.Defaults, t.Items);
+            Assert.Equal(Conversions.DefaultCsv, File.ReadAllText(path));   // written verbatim
+
+            File.WriteAllText(path, "From,To,Factor\nKilograms,Pounds,2.20462262185\n");
+            t = Conversions.Load(path);
+            Assert.Equal([new Conversion("Kilograms", "Pounds", 2.20462262185)], t.Items);
+            Assert.Empty(t.Warnings);
+
+            File.WriteAllText(path, "");
+            Assert.Empty(Conversions.Load(path).Items);   // an emptied file is respected, not refilled
+        }
+        finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void HelpSectionListsFileAndWarnings()
+    {
+        var t = new ConversionTable([new Conversion("Grams", "lbs./M", 2.2)], ["Line 3: bad"], "x");
+        string help = Conversions.HelpSection(t, "%APPDATA%\\RPNCalc\\conversions.csv");
+        Assert.Contains("Grams → lbs./M", help);
+        Assert.Contains("× 2.2", help);
+        Assert.Contains("Roman numeral", help);
+        Assert.Contains("%APPDATA%\\RPNCalc\\conversions.csv", help);
+        Assert.Contains("Line 3: bad", help);
     }
 }
 

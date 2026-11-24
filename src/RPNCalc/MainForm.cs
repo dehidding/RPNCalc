@@ -26,6 +26,9 @@ internal sealed class MainForm : Form
     private ToolStripMenuItem _miShowStack = null!, _miShowKeypad = null!, _miStayOnTop = null!;
     private ToolStripMenuItem _miFixed = null!, _miScientific = null!;
     private readonly ToolStripMenuItem[] _miDecimals = new ToolStripMenuItem[10];
+    private readonly ToolStripMenuItem _convMenu = new("Conversions");
+    private static readonly string ConversionsPath = Conversions.GetPath();
+    private ConversionTable _conversions = new([], [], ConversionsPath);
 
     private Font? _regFont, _tagFont, _btnFont;
     private int _logicalWidth;
@@ -88,7 +91,7 @@ internal sealed class MainForm : Form
 
     private NoFocusButton MakeButton(string text, CalcCommand cmd, string tip)
     {
-        var b = new NoFocusButton { Text = text };
+        var b = new NoFocusButton { Label = text };
         b.Click += (_, _) => Run(cmd);
         _tips.SetToolTip(b, tip);
         return b;
@@ -103,8 +106,8 @@ internal sealed class MainForm : Form
             if (glyph != ButtonGlyph.None)
             {
                 // Face shows only a drawn bold arrow; the name stays for screen readers.
+                b.Label = "";
                 b.AccessibleName = text;
-                b.Text = "";
                 b.Glyph = glyph;
             }
             _keypad.Add((b, row, col, span));
@@ -166,22 +169,49 @@ internal sealed class MainForm : Form
             new ToolStripMenuItem("Larger", null, (_, _) => ChangeFontSize(+2)),
             new ToolStripMenuItem("Smaller", null, (_, _) => ChangeFontSize(-2)));
 
-        var convMenu = new ToolStripMenuItem("Conversions");
-        foreach (var conv in Conversions.All)
-        {
-            var c = conv;
-            convMenu.DropDownItems.Add(new ToolStripMenuItem(c.Name.Replace("->", "→"), null, (_, _) => Report(_calc.Convert(c.Factor))));
-        }
+        RebuildConversionsMenu();
 
         _menu.Items.AddRange(
         [
             _miShowStack, _miShowKeypad, _miStayOnTop,
-            decMenu, fmtMenu, fontMenu, convMenu,
+            decMenu, fmtMenu, fontMenu, _convMenu,
             new ToolStripSeparator(),
             new ToolStripMenuItem("Help", null, (_, _) => ShowHelp()) { ShortcutKeyDisplayString = "F1" },
             new ToolStripMenuItem("About", null, (_, _) => { using var a = new AboutForm(); a.ShowDialog(this); }),
         ]);
-        _menu.Opening += (_, _) => SyncMenuChecks();
+        _menu.Opening += (_, _) => { RebuildConversionsMenu(); SyncMenuChecks(); };
+    }
+
+    /// <summary>Re-reads conversions.csv so edits show up the next time the menu opens.</summary>
+    private void RebuildConversionsMenu()
+    {
+        _conversions = Conversions.Load(ConversionsPath);
+        _convMenu.DropDownItems.Clear();
+        foreach (var conv in _conversions.Items)
+        {
+            var c = conv;
+            _convMenu.DropDownItems.Add(new ToolStripMenuItem(c.MenuText, null, (_, _) => Report(_calc.Convert(c.Factor))) { ToolTipText = $"× {c.Factor.ToString("R", CultureInfo.InvariantCulture)}" });
+        }
+        if (_conversions.Items.Count == 0)
+            _convMenu.DropDownItems.Add(new ToolStripMenuItem("(no conversions in the file)") { Enabled = false });
+        _convMenu.DropDownItems.Add(new ToolStripSeparator());
+        if (_conversions.Warnings.Count > 0)
+            _convMenu.DropDownItems.Add(new ToolStripMenuItem($"⚠ {_conversions.Warnings.Count} line(s) skipped (see Help)", null, (_, _) => { _help?.Close(); ShowHelp(); }));
+        _convMenu.DropDownItems.Add(new ToolStripMenuItem("Edit Conversions...", null, (_, _) => EditConversions()));
+    }
+
+    private void EditConversions()
+    {
+        try
+        {
+            if (!File.Exists(ConversionsPath)) Conversions.Load(ConversionsPath);   // creates the default file
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ConversionsPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            try { System.Diagnostics.Process.Start("notepad.exe", $"\"{ConversionsPath}\""); }
+            catch { MessageBox.Show(this, $"Could not open {ConversionsPath}: {ex.Message}", AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        }
     }
 
     private void SyncMenuChecks()
@@ -248,7 +278,8 @@ internal sealed class MainForm : Form
     {
         if (_help is null || _help.IsDisposed)
         {
-            _help = new HelpForm();
+            _conversions = Conversions.Load(ConversionsPath);
+            _help = new HelpForm(_conversions);
             _help.Show(this);
         }
         else
@@ -403,7 +434,7 @@ internal sealed class MainForm : Form
                 xRow[i].Bounds = new Rectangle(left, by, right - left, btnH);
                 bx += units[i] * unit + gap;
             }
-            foreach (var b in new[] { _btnEnter, _btnChs, _btnLastX, _btnBack }) b.Font = _btnFont;
+            foreach (var b in xRow) b.Font = _btnFont;
             _pMain.Bounds = new Rectangle(0, y, w, by + btnH + m);
             y = _pMain.Bottom;
 
@@ -439,12 +470,17 @@ internal sealed class MainForm : Form
         UpdateDisplay();
     }
 
+    /// <summary>Key label size in logical pixels for a 26 px key.</summary>
+    internal const float ButtonFontPx = 16f;
+
     private void ReplaceFonts(float s)
     {
         // Sizes are points at 96 DPI converted to pixels, then scaled for the monitor.
         _regFont = UiFonts.Get("Arial", _settings.FontSize * 96f / 72f * s, FontStyle.Bold, GraphicsUnit.Pixel);
         _tagFont = UiFonts.Get("Arial", 9f * 96f / 72f * s, FontStyle.Bold, GraphicsUnit.Pixel);
-        _btnFont = UiFonts.Get("Arial", 8.25f * 96f / 72f * s, FontStyle.Bold, GraphicsUnit.Pixel);
+        // Key labels: large bold text, about 62% of the 26 px key height (was 11 px). NoFocusButton draws
+        // the label itself and shrinks it only when the key is too narrow for it.
+        _btnFont = UiFonts.Get("Arial", ButtonFontPx * s, FontStyle.Bold, GraphicsUnit.Pixel);
         foreach (Control c in AllControls(this))
             if (c is Label or Button) c.Font = c is Button ? _btnFont : (c == _tagT || c == _tagZ || c == _tagY || c == _tagX ? _tagFont : _regFont);
     }

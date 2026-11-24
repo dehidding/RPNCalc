@@ -22,6 +22,58 @@ internal sealed class NoFocusButton : Button
     protected override bool ShowFocusCues => false;
 
     private ButtonGlyph _glyph;
+    private string _label = "";
+    private (string Label, Size Size, Font Font, Font Fitted) _fitCache;
+
+    private const TextFormatFlags LabelFlags =
+        TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix;
+
+    /// <summary>
+    /// Key label. It is drawn by this class (not by the native button, which wraps or clips text that
+    /// does not fit) at <see cref="Control.Font"/>, or at the largest smaller size that fits inside the
+    /// key, so long labels such as "X&lt;&gt;Y" shrink just enough. Also used as the accessible name.
+    /// </summary>
+    public string Label
+    {
+        get => _label;
+        set
+        {
+            _label = value ?? "";
+            AccessibleName = _label.Length > 0 ? _label : null;
+            _fitCache = default;
+            Invalidate();
+        }
+    }
+
+    /// <summary>
+    /// Largest font (same family/style as Font, at most Font's size) whose label fits the key face,
+    /// keeping clear of the button border. Measured with the same API and flags used to draw it.
+    /// </summary>
+    internal Font FittedLabelFont(Graphics? g = null)
+    {
+        if (_fitCache.Label == _label && _fitCache.Size == ClientSize && ReferenceEquals(_fitCache.Font, Font) && _fitCache.Fitted is not null)
+            return _fitCache.Fitted;
+        float s = DeviceDpi / 96f;
+        int availW = ClientSize.Width - 2 * (int)Math.Ceiling(3 * s);   // border + 1 px
+        int availH = ClientSize.Height - 2 * (int)Math.Ceiling(2 * s);
+        Font f = Font;
+        float px = Font.SizeInPoints * DeviceDpi / 72f;   // work in pixels, whatever unit Font uses
+        Size Measure(Font font) => g is null
+            ? TextRenderer.MeasureText(_label, font, new Size(int.MaxValue, int.MaxValue), LabelFlags)
+            : TextRenderer.MeasureText(g, _label, font, new Size(int.MaxValue, int.MaxValue), LabelFlags);
+        while (px > 7f)
+        {
+            Size m = Measure(f);
+            if (m.Width <= availW && m.Height <= availH) break;
+            px -= 0.5f;
+            f = UiFonts.Get(Font.FontFamily.Name, px, Font.Style, GraphicsUnit.Pixel);
+        }
+        _fitCache = (_label, ClientSize, Font, f);
+        return f;
+    }
+
+    protected override void OnFontChanged(EventArgs e) { _fitCache = default; base.OnFontChanged(e); }
+    protected override void OnSizeChanged(EventArgs e) { _fitCache = default; base.OnSizeChanged(e); }
 
     /// <summary>
     /// When set, a bold arrow is drawn (anti-aliased, sized from the button's pixel height so it scales
@@ -53,8 +105,15 @@ internal sealed class NoFocusButton : Button
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        base.OnPaint(e);
-        if (_glyph == ButtonGlyph.None) return;
+        base.OnPaint(e);   // button face only: Text stays empty
+        if (_glyph == ButtonGlyph.None)
+        {
+            if (_label.Length == 0) return;
+            var color = Enabled ? ForeColor : SystemColors.GrayText;
+            TextRenderer.DrawText(e.Graphics, _label, FittedLabelFont(e.Graphics), ClientRectangle, color,
+                LabelFlags | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            return;
+        }
         var g = e.Graphics;
         var old = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;

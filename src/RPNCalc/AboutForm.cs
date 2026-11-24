@@ -39,7 +39,7 @@ internal sealed class AboutForm : Form
             icon,
             L("RPN Calculator", 16, bold: true, h: 24),
             L("Version " + version, 44),
-            L("Copyright: original Delphi version 1997;\nWindows re-implementation 2026", 68, h: 36),
+            L("Copyright © David Hidding 2026", 68, h: 36),
             L("HP-style Reverse Polish Notation calculator for Windows 10/11. " +
               "Settings and stack are saved in %APPDATA%\\RPNCalc\\settings.json.", 110, h: 70),
             ok,

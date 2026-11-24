@@ -7,4 +7,9 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Default conversions list, written verbatim to the user's conversions.csv on first run. -->
+    <EmbeddedResource Include="conversions.csv" LogicalName="RPNCalc.Engine.conversions.csv" />
+  </ItemGroup>
+
 </Project>

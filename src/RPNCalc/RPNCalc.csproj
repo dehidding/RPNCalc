@@ -17,7 +17,7 @@
 
     <Product>RPN Calculator</Product>
     <Version>1.1.1</Version>
-    <Copyright>Original Delphi version (c) 1997; Windows re-implementation 2026</Copyright>
+    <Copyright>Copyright © David Hidding 2026</Copyright>
     <Description>HP-style RPN calculator - modern Windows re-implementation of the 1997 Delphi RPNCalc</Description>
 
     <!-- Single portable exe -->

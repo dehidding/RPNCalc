@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using RPNCalc.Engine;
 using RPNCalc.Mac;
 
@@ -178,10 +179,49 @@ public sealed class MainWindowTests : IDisposable
         var dec = Find(w.Menu, "Decimal Places");
         Assert.Equal(["0", "5", "1", "6", "2", "7", "3", "8", "4", "9"], dec.Items.OfType<MenuItem>().Select(m => (string)m.Header!));
         Assert.True(Find(dec, "4").IsChecked);
-        Assert.Equal(7, Find(w.Menu, "Conversions").Items.Count);
-        Assert.Equal("Grams → lbs./M", Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Last().Header);
+        var conv = Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Select(m => (string)m.Header!).ToArray();
+        Assert.Equal(27, conv.Length);                      // 26 from the default CSV + Edit Conversions...
+        Assert.Equal("Grams → lbs./M", conv[6]);
+        Assert.Equal("Specific Gravity → Cubic Inches", conv[25]);
+        Assert.Equal("Edit Conversions...", conv[26]);
+        Assert.True(File.Exists(Path.Combine(_dir, "conversions.csv")));   // created next to settings.json
         Assert.True(Find(w.Menu, "Show Stack").IsChecked);
         Assert.True(Find(Find(w.Menu, "Format Type"), "Fixed").IsChecked);
+    }
+
+    [AvaloniaFact]
+    public void ConversionsMenuFollowsTheCsvFile()
+    {
+        Directory.CreateDirectory(_dir);
+        string csv = Path.Combine(_dir, "conversions.csv");
+        File.WriteAllText(csv, "From,To,Factor\nInches,Centimeters,2.54\nbad line\n");
+        var (w, _) = Open();
+        var headers = Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Select(m => (string)m.Header!).ToArray();
+        Assert.Equal(["Inches → Centimeters", "⚠ 1 line(s) skipped (see Help)", "Edit Conversions..."], headers);
+
+        Type(w, "10");
+        ClickMenu(Find(Find(w.Menu, "Conversions"), "Inches → Centimeters"));
+        Assert.Equal("25.4000", w.XText);
+
+        // Edit the file while running: the next menu rebuild picks it up without a restart.
+        File.WriteAllText(csv, "Grams,lbs./M,2.2\nFeet,Meters,0.3048\n");
+        w.RebuildConversionsMenu();
+        headers = Find(w.Menu, "Conversions").Items.OfType<MenuItem>().Select(m => (string)m.Header!).ToArray();
+        Assert.Equal(["Grams → lbs./M", "Feet → Meters", "Edit Conversions..."], headers);
+        ClickMenu(Find(Find(w.Menu, "Conversions"), "Grams → lbs./M"));
+        Assert.Equal("55.8800", w.XText);   // 25.4 × 2.2
+        Assert.Contains("Feet → Meters", HelpText.Build(w.LoadedConversions));
+    }
+
+    [AvaloniaFact]
+    public void AboutShowsCopyright()
+    {
+        var about = new AboutWindow();
+        about.Show();
+        Dispatcher.UIThread.RunJobs();
+        var texts = about.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+        Assert.Contains("Copyright © David Hidding 2026", texts);
+        about.Close();
     }
 
     [AvaloniaFact]
@@ -291,6 +331,43 @@ public sealed class MainWindowTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void KeyLabelsAreLargeBoldAndFitNarrowWindow()
+    {
+        var (w, _) = Open();
+        w.Width = 200;                                   // minimum width: narrowest keys
+        w.CaptureRenderedFrame();                        // let the headless window apply the new size
+        w.UpdateLayout();
+        Assert.True(w.Buttons.Single(b => b.Content as string == "X<>Y").Bounds.Width < 40);
+        var textKeys = w.Buttons.Where(b => b.Content is string).ToList();
+        Assert.Equal(25, textKeys.Count);                // every key except the two roll arrows
+        foreach (var b in textKeys)
+        {
+            Assert.Equal(MainWindow.ButtonFontSize, b.FontSize);
+            Assert.True(b.FontSize >= 16);
+            Assert.Equal(Avalonia.Media.FontWeight.Bold, b.FontWeight);
+            var label = b.GetVisualDescendants().OfType<TextBlock>().Single();
+            Assert.Equal(Avalonia.Media.FontWeight.Bold, label.FontWeight);
+            var shown = label.TranslatePoint(new Point(label.Bounds.Width, 0), b)!.Value;
+            var start = label.TranslatePoint(new Point(0, 0), b)!.Value;
+            Assert.True(start.X >= 0 && shown.X <= b.Bounds.Width, $"{b.Content}: {start.X}..{shown.X} of {b.Bounds.Width}");
+        }
+        // "X<>Y" and "y^x" shrink as needed and stay on one line.
+        foreach (var name in new[] { "X<>Y", "y^x" })
+        {
+            var tb = textKeys.Single(b => (string)b.Content! == name).GetVisualDescendants().OfType<TextBlock>().Single();
+            Assert.Equal(Avalonia.Media.TextWrapping.NoWrap, tb.TextWrapping);
+            Assert.True(tb.Bounds.Height < 2 * tb.FontSize, $"{name} wrapped: {tb.Bounds}");
+        }
+        string snapDir = Environment.GetEnvironmentVariable("RPNCALC_SNAPSHOT_DIR") ?? _dir;
+        Directory.CreateDirectory(snapDir);
+        w.CaptureRenderedFrame()!.Save(Path.Combine(snapDir, "mainwindow-narrow.png"));
+        // Digits keep the full size; long labels may shrink only as far as needed.
+        var seven = textKeys.Single(b => (string)b.Content! == "7");
+        var vb = seven.GetVisualDescendants().OfType<Viewbox>().Single();
+        Assert.Equal(vb.Child!.Bounds.Height, vb.Bounds.Height, 1);
+    }
+
+    [AvaloniaFact]
     public void RollButtonsShowOnlyBoldArrowsAndKeepNamesAndFunction()
     {
         var (w, _) = Open();
@@ -336,9 +413,10 @@ public sealed class MainWindowTests : IDisposable
     [AvaloniaFact]
     public void HelpTextMentionsMacKeys()
     {
-        string t = HelpText.Build();
+        string t = HelpText.Build(new ConversionTable(Conversions.Defaults, [], ""));
         Assert.Contains("Cmd+Q", t);
         Assert.Contains("Library/Application Support/RPNCalc/settings.json", t);
+        Assert.Contains("Library/Application Support/RPNCalc/conversions.csv", t);
         Assert.Contains("Grams → lbs./M", t);
     }
 }

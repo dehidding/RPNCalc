@@ -5,8 +5,11 @@ namespace RPNCalc;
 /// <summary>Modeless Help window (F1 or right-click → Help).</summary>
 internal sealed class HelpForm : Form
 {
-    public HelpForm()
+    private readonly ConversionTable _conversions;
+
+    public HelpForm(ConversionTable conversions)
     {
+        _conversions = conversions;
         Text = "RPN Calculator Help";
         AutoScaleDimensions = new SizeF(96F, 96F);
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -41,10 +44,9 @@ internal sealed class HelpForm : Form
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
-    private static string BuildText()
+    private string BuildText()
     {
-        string conv = string.Join(Environment.NewLine, Conversions.All.Select(c =>
-            $"  {c.Name.Replace("->", "→"),-36} × {c.Factor:0.##########}"));
+        string conv = Conversions.HelpSection(_conversions, @"%APPDATA%\RPNCalc\" + Conversions.FileName);
         return $$"""
 RPN CALCULATOR
 ==============
@@ -102,15 +104,14 @@ RIGHT-CLICK MENU
   Format Type      Fixed (1234.5600) or Scientific (1.2346E+03)
   Font Size        Larger / Smaller register digits
   Conversions      Multiply X by a conversion factor
-                   (the old X is saved in Last X)
+                   (the old X is saved in Last X); the list
+                   comes from conversions.csv (see below)
   Help             This window
   About            Version information
 
 CONVERSIONS
 -----------
 {{conv}}
-  "lbs./M": grams per piece → pounds per M pieces
-  ("M" is the Roman numeral for 1,000; factor 2.2 as in 1997).
 
 ERRORS
 ------

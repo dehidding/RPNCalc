@@ -1,0 +1,27 @@
+From,To,Factor
+Cubic Inches,Fluid Ounces (US),0.5541125541125541
+Cubic Inches,Milliliters,16.387064
+Fluid Ounces (US),Cubic Inches,1.8046875
+Fluid Ounces (US),Milliliters,29.57352956
+Milliliters,Cubic Inches,0.061023744
+Milliliters,Fluid Ounces (US),0.033814023
+Grams,lbs./M,2.2
+Grams,lbs,0.0022
+Cubic Inches,Acetal,0.0514
+Cubic Inches,Nylon 6/6,0.0412
+Cubic Inches,Nylon 6/12,0.0387
+Cubic Inches,Nylon ST,0.0394
+Cubic Inches,LDPE  .920,0.03324
+Cubic Inches,HDPE .950,0.03432
+Cubic Inches,Acrylic,0.043
+Cubic Inches,Polyester,0.049
+Cubic Inches,PS,0.0383
+Cubic Inches,PP,0.0327
+Cubic Inches,PVC (Rigid),0.04805
+Cubic Inches,SAN,0.0386
+Cubic Inches,ABS,0.0383
+Cubic Inches,PC,0.0433
+Cubic Inches,Water,0.0361
+Cubic Inches,Aluminum,0.0975
+Cubic Inches,Steel,0.2836
+Specific Gravity,Cubic Inches,0.03612729
