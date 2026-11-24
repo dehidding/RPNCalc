@@ -1,6 +1,9 @@
 using System.Globalization;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Data;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
@@ -171,6 +174,34 @@ public sealed class MainWindow : Window
         return b;
     }
 
+    /// <summary>Bold arrow outline in a 10 x 12 unit box: wide head, thick shaft (same shape as on Windows).</summary>
+    internal const string ArrowUpData = "M5,0 L10,5.5 L6.9,5.5 L6.9,12 L3.1,12 L3.1,5.5 L0,5.5 Z";
+    internal const string ArrowDownData = "M5,12 L10,6.5 L6.9,6.5 L6.9,0 L3.1,0 L3.1,6.5 L0,6.5 Z";
+
+    /// <summary>
+    /// Replaces the button text with a vector arrow (crisp at any Retina scale). The accessible name keeps
+    /// the text, and the fill follows the button's text colour (pressed/disabled states).
+    /// </summary>
+    private static void SetArrowFace(Button b, string name, string pathData)
+    {
+        var path = new Avalonia.Controls.Shapes.Path
+        {
+            Data = Geometry.Parse(pathData),
+            Stretch = Stretch.Uniform,
+            Height = Math.Round(ButtonHeight * 0.58),
+            Width = Math.Round(ButtonHeight * 0.58 * 10 / 12),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Fill = Brushes.Black,
+        };
+        path.Bind(Avalonia.Controls.Shapes.Shape.FillProperty, new Binding("Foreground")
+        {
+            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor) { AncestorType = typeof(ContentPresenter) },
+        });
+        b.Content = path;
+        AutomationProperties.SetName(b, name);
+    }
+
     private void BuildMain()
     {
         var p = new StackPanel { Margin = new Thickness(0, Margin4, 0, Margin4) };
@@ -201,9 +232,10 @@ public sealed class MainWindow : Window
             RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto"),
             Margin = new Thickness(Margin4 - Gap / 2, 0, Margin4 - Gap / 2, Margin4),
         };
-        void Add(string text, CalcCommand cmd, string tip, int row, int col, int span = 1)
+        void Add(string text, CalcCommand cmd, string tip, int row, int col, int span = 1, string? arrow = null)
         {
             var b = MakeButton(text, cmd, tip);
+            if (arrow is not null) SetArrowFace(b, text, arrow);
             Grid.SetRow(b, row); Grid.SetColumn(b, col); Grid.SetColumnSpan(b, span);
             g.Children.Add(b);
         }
@@ -226,8 +258,8 @@ public sealed class MainWindow : Window
         Add(".", CalcCommand.Decimal, "Decimal point (.)", 4, 3);
 
         Add("X<>Y", CalcCommand.Swap, "Exchange X and Y (X)", 1, 4);
-        Add("Roll↑", CalcCommand.RollUp, "Roll Up (Up Arrow)", 2, 4);
-        Add("Roll↓", CalcCommand.RollDown, "Roll Down (Down Arrow)", 3, 4);
+        Add("Roll Up", CalcCommand.RollUp, "Roll Up (Up Arrow)", 2, 4, arrow: ArrowUpData);
+        Add("Roll Down", CalcCommand.RollDown, "Roll Down (Down Arrow)", 3, 4, arrow: ArrowDownData);
         _pKeypad.Children.Add(g);
     }
 

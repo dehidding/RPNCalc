@@ -72,7 +72,7 @@ It works the same way as on Windows (see [Settings file](#settings-file)). To re
 - Classic layout:
   - Stack panel with T/Z/Y.
   - X register with **Enter**, **+/-**, **Last X** and **<**.
-  - Keypad: 1/x, y^x, x², √x and π on top; digits; − + × ÷ in the left column; X<>Y, Roll↑ and Roll↓ in the right column.
+  - Keypad: 1/x, y^x, x², √x and π on top; digits; − + × ÷ in the left column; X<>Y, Roll Up (bold ▲ arrow) and Roll Down (bold ▼ arrow) in the right column.
 - Right-click menu:
   - Show Stack, Show Keypad and Stay on Top.
   - Decimal Places 0-9 in two columns (0-4 | 5-9).

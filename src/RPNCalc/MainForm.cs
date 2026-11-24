@@ -96,9 +96,17 @@ internal sealed class MainForm : Form
 
     private void BuildKeypad()
     {
-        void Add(string text, CalcCommand cmd, string tip, int row, int col, int span = 1)
+        void Add(string text, CalcCommand cmd, string tip, int row, int col, int span = 1,
+                 ButtonGlyph glyph = ButtonGlyph.None)
         {
             var b = MakeButton(text, cmd, tip);
+            if (glyph != ButtonGlyph.None)
+            {
+                // Face shows only a drawn bold arrow; the name stays for screen readers.
+                b.AccessibleName = text;
+                b.Text = "";
+                b.Glyph = glyph;
+            }
             _keypad.Add((b, row, col, span));
             _pKeypad.Controls.Add(b);
         }
@@ -121,8 +129,8 @@ internal sealed class MainForm : Form
         Add(".", CalcCommand.Decimal, "Decimal point (.)", 4, 3);
 
         Add("X<>Y", CalcCommand.Swap, "Exchange X and Y (X)", 1, 4);
-        Add("Roll↑", CalcCommand.RollUp, "Roll Up (Up Arrow)", 2, 4);
-        Add("Roll↓", CalcCommand.RollDown, "Roll Down (Down Arrow)", 3, 4);
+        Add("Roll Up", CalcCommand.RollUp, "Roll Up (Up Arrow)", 2, 4, glyph: ButtonGlyph.ArrowUp);
+        Add("Roll Down", CalcCommand.RollDown, "Roll Down (Down Arrow)", 3, 4, glyph: ButtonGlyph.ArrowDown);
     }
 
     private void BuildMenu()

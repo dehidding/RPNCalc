@@ -145,7 +145,7 @@ public sealed class MainWindowTests : IDisposable
     {
         var (w, _) = Open();
         Assert.All(w.Buttons, b => Assert.False(b.Focusable));
-        var seven = w.Buttons.Single(b => (string?)b.Content == "7");
+        var seven = w.Buttons.Single(b => b.Content as string == "7");
         var p = seven.TranslatePoint(new Point(seven.Bounds.Width / 2, seven.Bounds.Height / 2), w)!.Value;
         w.MouseDown(p, MouseButton.Left); w.MouseUp(p, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
@@ -288,6 +288,49 @@ public sealed class MainWindowTests : IDisposable
         Directory.CreateDirectory(outDir);
         frame!.Save(Path.Combine(outDir, "mainwindow.png"));
         Assert.True(frame.PixelSize.Width >= 200);
+    }
+
+    [AvaloniaFact]
+    public void RollButtonsShowOnlyBoldArrowsAndKeepNamesAndFunction()
+    {
+        var (w, _) = Open();
+        var up = w.Buttons.Single(b => (CalcCommand)b.Tag! == CalcCommand.RollUp);
+        var down = w.Buttons.Single(b => (CalcCommand)b.Tag! == CalcCommand.RollDown);
+        foreach (var (b, name, data) in new[] { (up, "Roll Up", MainWindow.ArrowUpData), (down, "Roll Down", MainWindow.ArrowDownData) })
+        {
+            var path = Assert.IsType<Avalonia.Controls.Shapes.Path>(b.Content);   // no text on the face
+            Assert.Equal(name, Avalonia.Automation.AutomationProperties.GetName(b));
+            Assert.Equal(name + (name == "Roll Up" ? " (Up Arrow)" : " (Down Arrow)"), ToolTip.GetTip(b));
+            Assert.NotNull(path.Fill);                                            // follows the text colour
+            Assert.True(path.Bounds.Height >= 14 && path.Bounds.Height < b.Bounds.Height, $"{path.Bounds}");
+            Assert.False(b.Focusable);
+        }
+        // Up arrow: tip (narrow) at the top; down arrow: tip at the bottom.
+        var upGeo = Avalonia.Media.Geometry.Parse(MainWindow.ArrowUpData);
+        Assert.True(upGeo.FillContains(new Point(5, 0.5)) && !upGeo.FillContains(new Point(1, 11.5)));
+        var downGeo = Avalonia.Media.Geometry.Parse(MainWindow.ArrowDownData);
+        Assert.True(downGeo.FillContains(new Point(5, 11.5)) && !downGeo.FillContains(new Point(1, 0.5)));
+
+        // Buttons and keys still roll the stack.
+        Type(w, "1"); Press(w, Key.Enter); Type(w, "2"); Press(w, Key.Enter); Type(w, "3");
+        up.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(new double[] { 0, 3, 2, 1 }, new[] { w.Calculator.X, w.Calculator.Y, w.Calculator.Z, w.Calculator.T });
+        down.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(3, w.Calculator.X);
+        Press(w, Key.Down);
+        Assert.Equal(2, w.Calculator.X);
+
+        // Retina-style 2x render of the window content for a visual check.
+        string? outDir = Environment.GetEnvironmentVariable("RPNCALC_SNAPSHOT_DIR");
+        if (outDir is not null)
+        {
+            var root = (Control)w.Content!;
+            using var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(
+                new PixelSize((int)(root.Bounds.Width * 2), (int)(root.Bounds.Height * 2)), new Vector(192, 192));
+            rtb.Render(root);
+            Directory.CreateDirectory(outDir);
+            rtb.Save(Path.Combine(outDir, "mainwindow@2x.png"));
+        }
     }
 
     [AvaloniaFact]

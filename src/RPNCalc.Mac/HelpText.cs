@@ -56,7 +56,7 @@ BUTTONS
   y^x                        Y raised to the power X
   x²   √x                    Square, square root of X
   π                          Pi
-  X<>Y  Roll↑  Roll↓         Exchange, roll up, roll down
+  X<>Y  ▲  ▼                 Exchange, Roll Up, Roll Down
 Hover over a button to see its keyboard shortcut.
 
 CONTEXT MENU (right-click, two-finger click or Ctrl+click)
