@@ -434,8 +434,9 @@ internal sealed class MainForm : Form
                 xRow[i].Bounds = new Rectangle(left, by, right - left, btnH);
                 bx += units[i] * unit + gap;
             }
-            foreach (var b in xRow) b.Font = _btnFont;
-            _pMain.Bounds = new Rectangle(0, y, w, by + btnH + m);
+            foreach (var b in xRow) { b.Font = _btnFont; b.Visible = _settings.ShowKeypad; }
+            // Hiding the keypad also hides this top key row: only the X register remains (keyboard still works).
+            _pMain.Bounds = new Rectangle(0, y, w, _settings.ShowKeypad ? by + btnH + m : m + rowH + m);
             y = _pMain.Bottom;
 
             _pKeypad.Visible = _settings.ShowKeypad;

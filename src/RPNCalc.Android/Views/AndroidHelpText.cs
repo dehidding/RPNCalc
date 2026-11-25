@@ -52,7 +52,8 @@ MENU (menu button with three lines at the top right,
       or long-press the display)
 ----
   Show Stack       Show/hide the T, Z, Y registers
-  Show Keypad      Show/hide the keypad
+  Show Keypad      Show/hide all keys, including the Enter
+                   row (a hardware keyboard still works)
   Decimal Places   0 to 9 digits after the decimal point
   Format Type      Fixed (1234.5600) or Scientific (1.2346E+03)
   Font Size        Larger / Smaller register digits

@@ -24,10 +24,15 @@ public class LayoutFitTests
         root.Measure(new Size(w.Width, double.PositiveInfinity));
         Assert.Equal(Math.Ceiling(root.DesiredSize.Height), w.Height);
         Assert.Equal(w.Height, w.ClientSize.Height);
+        Assert.Equal(keypad, w.KeyRowVisible);
+        Assert.Equal(keypad, w.Buttons.Any(b => b.IsEffectivelyVisible));
         // the lowest visible button is fully inside the client area
-        var last = keypad ? w.Buttons[^1] : w.Buttons[3];
-        var bottom = last.TranslatePoint(new Point(0, last.Bounds.Height), w)!.Value.Y;
-        Assert.True(bottom <= w.ClientSize.Height - 2, $"button bottom {bottom} vs client {w.ClientSize.Height}");
+        if (keypad)
+        {
+            var last = w.Buttons[^1];
+            var bottom = last.TranslatePoint(new Point(0, last.Bounds.Height), w)!.Value.Y;
+            Assert.True(bottom <= w.ClientSize.Height - 2, $"button bottom {bottom} vs client {w.ClientSize.Height}");
+        }
         w.Close();
         File.Delete(path);
     }

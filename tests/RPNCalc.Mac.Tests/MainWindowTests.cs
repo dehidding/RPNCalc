@@ -294,8 +294,44 @@ public sealed class MainWindowTests : IDisposable
         var (w2, _) = Open();
         Assert.Equal(("7.0", "42.0"), (w2.XText, w2.YText));
         Assert.False(w2.KeypadVisible);
+        Assert.False(w2.KeyRowVisible);        // the top key row is hidden at startup too
         Type(w2, "1");                         // completed number restored -> pushes
         Assert.Equal(("1", "7.0", "42.0"), (w2.XText, w2.YText, w2.ZText));
+    }
+
+    [AvaloniaFact]
+    public void HidingKeypadAlsoHidesTopRowAndShrinks()
+    {
+        var (w, _) = Open();
+        double full = w.Height;
+        Assert.True(w.KeyRowVisible && w.Buttons.Take(4).All(b => b.IsEffectivelyVisible));
+
+        ClickMenu(Find(w.Menu, "Show Keypad"));
+        Assert.False(w.KeypadVisible);
+        Assert.False(w.KeyRowVisible);
+        Assert.DoesNotContain(w.Buttons, b => b.IsEffectivelyVisible);   // Enter, +/-, Last X, < are gone too
+        Assert.Equal(full - (6 * (26 + 4) + 4), w.Height);               // 5 keypad rows + top row + margin
+
+        // the keyboard still drives the calculator with every key hidden
+        Type(w, "3"); Press(w, Key.Enter); Type(w, "4+");
+        Assert.Equal("7.0000", w.XText);
+
+        string outDir = Environment.GetEnvironmentVariable("RPNCALC_SNAPSHOT_DIR") ?? _dir;
+        Directory.CreateDirectory(outDir);
+        w.CaptureRenderedFrame()!.Save(Path.Combine(outDir, "keypad-hidden.png"));
+
+        // stack hidden as well: only the X register remains, no leftover gap
+        ClickMenu(Find(w.Menu, "Show Stack"));
+        var root = (Control)w.Content!;
+        root.Measure(new Size(w.Width, double.PositiveInfinity));
+        Assert.Equal(Math.Ceiling(root.DesiredSize.Height), w.Height);
+        w.CaptureRenderedFrame()!.Save(Path.Combine(outDir, "display-only.png"));
+        ClickMenu(Find(w.Menu, "Show Stack"));
+
+        ClickMenu(Find(w.Menu, "Show Keypad"));
+        Assert.True(w.KeypadVisible && w.KeyRowVisible);
+        Assert.True(w.Buttons.All(b => b.IsEffectivelyVisible));
+        Assert.Equal(full, w.Height);
     }
 
     [AvaloniaFact]

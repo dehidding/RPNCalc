@@ -15,7 +15,7 @@
     <DebugType>embedded</DebugType>
 
     <Product>RPN Calculator</Product>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <Copyright>Copyright © David Hidding 2026</Copyright>
     <Description>HP-style RPN calculator - macOS (Avalonia) version of the 1997 Delphi RPNCalc</Description>
 

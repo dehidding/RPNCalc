@@ -9,7 +9,7 @@ internal sealed class AboutForm : Form
     {
         var asm = Assembly.GetExecutingAssembly();
         string version = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
-                         ?? asm.GetName().Version?.ToString() ?? "1.1.1";
+                         ?? asm.GetName().Version?.ToString() ?? "2.0.1";
 
         Text = "About";
         AutoScaleDimensions = new SizeF(96F, 96F);
