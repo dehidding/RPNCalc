@@ -24,7 +24,7 @@ internal static class Overlays
         {
             var asm = typeof(Overlays).Assembly;
             return asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
-                   ?? asm.GetName().Version?.ToString() ?? "1.2.1";
+                   ?? asm.GetName().Version?.ToString() ?? "1.2.2";
         }
     }
 

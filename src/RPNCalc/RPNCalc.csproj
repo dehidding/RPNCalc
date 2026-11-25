@@ -16,7 +16,7 @@
     <ApplicationIcon>rpncalc.ico</ApplicationIcon>
 
     <Product>RPN Calculator</Product>
-    <Version>1.1.1</Version>
+    <Version>2.0.1</Version>
     <Copyright>Copyright © David Hidding 2026</Copyright>
     <Description>HP-style RPN calculator - modern Windows re-implementation of the 1997 Delphi RPNCalc</Description>
 

@@ -76,7 +76,7 @@ public sealed class AboutWindow : DialogBase
     {
         var asm = Assembly.GetExecutingAssembly();
         string version = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
-                         ?? asm.GetName().Version?.ToString() ?? "1.1.1";
+                         ?? asm.GetName().Version?.ToString() ?? "1.1.2";
         Title = "About RPNCalc";
         Width = 380;
         SizeToContent = SizeToContent.Height;

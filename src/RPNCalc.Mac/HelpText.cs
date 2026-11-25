@@ -61,7 +61,9 @@ Hover over a button to see its keyboard shortcut.
 CONTEXT MENU (right-click, two-finger click or Ctrl+click)
 ------------
   Show Stack       Show/hide the T, Z, Y registers
-  Show Keypad      Show/hide the keypad (compact X-only view)
+  Show Keypad      Show/hide all keys: the keypad and the
+                   Enter +/- Last X < row (compact X-only
+                   view; the keyboard still works)
   Stay on Top      Keep the calculator above other windows
   Decimal Places   0 to 9 digits after the decimal point
   Format Type      Fixed (1234.5600) or Scientific (1.2346E+03)

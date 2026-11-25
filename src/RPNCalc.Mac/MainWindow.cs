@@ -36,6 +36,7 @@ public sealed class MainWindow : Window
     private readonly TextBlock _regT = RegText(), _regZ = RegText(), _regY = RegText(), _regX = RegText();
     private readonly List<Border> _regBorders = [];
     private readonly List<Button> _buttons = [];
+    private Grid _xKeyRow = null!;        // Enter | +/- | Last X | <  (hidden together with the keypad)
 
     private readonly ContextMenu _menu = new();
     private MenuItem _miShowStack = null!, _miShowKeypad = null!, _miStayOnTop = null!, _miFixed = null!, _miScientific = null!;
@@ -109,6 +110,7 @@ public sealed class MainWindow : Window
     internal ContextMenu Menu => _menu;
     internal bool StackVisible => _pStack.IsVisible;
     internal bool KeypadVisible => _pKeypad.IsVisible;
+    internal bool KeyRowVisible => _xKeyRow.IsVisible;
     internal IReadOnlyList<Button> Buttons => _buttons;
 
     // ------------------------------------------------------------------ construction
@@ -251,6 +253,7 @@ public sealed class MainWindow : Window
         ];
         for (int i = 0; i < bs.Length; i++) { Grid.SetColumn(bs[i], i); row.Children.Add(bs[i]); }
         p.Children.Add(row);
+        _xKeyRow = row;
         _pMain.Children.Add(p);
     }
 
@@ -531,6 +534,7 @@ public sealed class MainWindow : Window
     {
         _pStack.IsVisible = _settings.ShowStack;
         _pKeypad.IsVisible = _settings.ShowKeypad;
+        _xKeyRow.IsVisible = _settings.ShowKeypad;      // Show Keypad off hides ALL keys, incl. the top row
 
         double px = _settings.FontSize * 96.0 / 72.0;     // points -> device-independent pixels
         double rowH = Math.Ceiling(px * 1.25) + 4;
@@ -539,7 +543,8 @@ public sealed class MainWindow : Window
 
         // Every row has an explicit whole-pixel height and margin, so the content height is exact and
         // width-independent (verified against the measured layout in LayoutFitTests).
-        double h = Margin4 + rowH + Gap + (ButtonHeight + Gap) + Margin4;                // X panel
+        double h = Margin4 + rowH + Gap + Margin4;                                       // X register
+        if (_settings.ShowKeypad) h += ButtonHeight + Gap;                               // Enter row
         if (_settings.ShowStack) h += Margin4 + 3 * (rowH + Gap);
         if (_settings.ShowKeypad) h += 5 * (ButtonHeight + Gap) + Margin4;
         MinHeight = 0;

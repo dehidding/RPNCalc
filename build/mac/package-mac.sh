@@ -8,7 +8,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-VERSION="1.1.1"
+VERSION="1.1.2"
 PROJECT="$ROOT/src/RPNCalc.Mac/RPNCalc.Mac.csproj"
 ICON="$ROOT/build/mac/rpncalc.icns"
 DIST="$ROOT/dist"

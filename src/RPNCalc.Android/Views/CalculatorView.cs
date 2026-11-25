@@ -577,16 +577,18 @@ public sealed class CalculatorView : UserControl
 
     /// <summary>
     /// Stack/keypad visibility and register font size. The main row and keypad share the remaining height
-    /// (1 : 5 rows), so all keys are equally tall; without the keypad the main row is a normal key height.
+    /// (1 : 5 rows), so all keys are equally tall. Hiding the keypad hides every key, including the top
+    /// (Enter) row; the registers then use the whole width and the keyboard keeps working.
     /// </summary>
     internal void ApplyLayout()
     {
+        bool keys = _settings.ShowKeypad;
         _stackRows.IsVisible = _settings.ShowStack;
-        _keypad.IsVisible = _settings.ShowKeypad;
-        _body.RowDefinitions[2].Height = _settings.ShowKeypad ? new GridLength(5, GridUnitType.Star) : new GridLength(0);
-        _body.RowDefinitions[1].Height = _settings.ShowKeypad ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
-        _mainRow.Height = _settings.ShowKeypad ? double.NaN : 64;
-        _mainRow.VerticalAlignment = _settings.ShowKeypad ? VerticalAlignment.Stretch : VerticalAlignment.Top;
+        _keypad.IsVisible = keys;
+        _mainRow.IsVisible = keys;
+        _body.RowDefinitions[2].Height = keys ? new GridLength(5, GridUnitType.Star) : new GridLength(0);
+        _body.RowDefinitions[1].Height = keys ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        ApplyColumns();
 
         double px = _settings.FontSize * 96.0 / 72.0 * 1.25;   // a little larger than desktop for touch screens
         double rowH = Math.Ceiling(px * 1.3) + 6;
@@ -601,7 +603,7 @@ public sealed class CalculatorView : UserControl
     {
         if (landscape == IsLandscape) return;
         IsLandscape = landscape;
-        _body.ColumnDefinitions[1].Width = landscape ? new GridLength(1.25, GridUnitType.Star) : new GridLength(0);
+        ApplyColumns();
         Grid.SetRowSpan(_display, landscape ? 3 : 1);
         int keyCol = landscape ? 1 : 0;
         Grid.SetColumn(_mainRow, keyCol);
@@ -610,6 +612,13 @@ public sealed class CalculatorView : UserControl
             ? new Thickness(0, Pad - Gap / 2, Pad - Gap / 2, 0)
             : new Thickness(Pad - Gap / 2, 0, Pad - Gap / 2, 0);
     }
+
+    /// <summary>The key column exists only in landscape with the keys shown.</summary>
+    private void ApplyColumns() =>
+        _body.ColumnDefinitions[1].Width = IsLandscape && _settings.ShowKeypad
+            ? new GridLength(1.25, GridUnitType.Star) : new GridLength(0);
+
+    internal bool KeyRowVisible => _mainRow.IsVisible;
 
     // ------------------------------------------------------------------ persistence
 

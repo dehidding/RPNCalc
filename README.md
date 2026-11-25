@@ -112,7 +112,7 @@ The script runs `dotnet publish src/RPNCalc.Android -c Release` with the signing
   - Font Size: Larger or Smaller.
   - Conversions.
   - Help and About.
-- The window shrinks to fit when the stack or keypad is hidden. You can drag its left or right edge to make it wider.
+- **Show Keypad** off hides all keys, including the top row (Enter, +/-, Last X, <), leaving a compact X-only view; the keyboard still works. The window shrinks to fit when the stack or keys are hidden. You can drag its left or right edge to make it wider.
 - Long numbers automatically shrink so they fit in their register.
 - Help window: press **F1** or use right-click → Help.
 
